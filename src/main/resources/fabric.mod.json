@@ -13,14 +13,11 @@
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/herschclient/icon.png",
-	"environment": "*",
+	"environment": "client",
 	"entrypoints": {
-		"main": [
-			"com.herschclient.Herschclient"
-		],
-		"client": [
-			"com.herschclient.HerschclientClient"
-		],
+        "client": [
+          "com.herschclient.HerschClient"
+        ],
 		"fabric-datagen": [
 			"com.herschclient.HerschclientDataGenerator"
 		]
