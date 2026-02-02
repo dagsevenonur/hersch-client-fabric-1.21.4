@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "herschclient",
+	"version": "${version}",
+	"name": "herschclient",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/herschclient/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.herschclient.Herschclient"
+		],
+		"client": [
+			"com.herschclient.HerschclientClient"
+		],
+		"fabric-datagen": [
+			"com.herschclient.HerschclientDataGenerator"
+		]
+	},
+	"mixins": [
+		"herschclient.mixins.json",
+		{
+			"config": "herschclient.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
