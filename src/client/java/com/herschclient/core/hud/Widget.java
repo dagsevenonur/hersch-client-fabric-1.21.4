@@ -1,24 +1,34 @@
 package com.herschclient.core.hud;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 
 public abstract class Widget {
-    private int x;
-    private int y;
-    private boolean visible = true;
+    protected String name;
+    protected boolean enabled = true;
+    protected int x, y;
 
-    protected Widget(int x, int y) {
+    public Widget(String name, int x, int y) {
+        this.name = name;
         this.x = x;
         this.y = y;
     }
 
-    public final int getX() { return x; }
-    public final int getY() { return y; }
-    public final void setPos(int x, int y) { this.x = x; this.y = y; }
+    public String getName() { return name; }
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
-    public final boolean isVisible() { return visible; }
-    public final void setVisible(boolean visible) { this.visible = visible; }
+    public int getX() { return x; }
+    public int getY() { return y; }
+    public void setPos(int x, int y) { this.x = x; this.y = y; }
 
-    public abstract String getId(); // config için sabit id
+    public int getWidth(MinecraftClient mc) {
+        return mc.textRenderer.getWidth(this.name);
+    }
+
+    public int getHeight(MinecraftClient mc) {
+        return 10;
+    }
+
     public abstract void render(DrawContext ctx);
 }

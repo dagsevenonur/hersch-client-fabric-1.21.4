@@ -7,20 +7,18 @@ import net.minecraft.client.gui.DrawContext;
 public final class FpsWidget extends Widget {
 
     public FpsWidget() {
-        super(6, 6); // sol üst
-    }
-
-    @Override
-    public String getId() {
-        return "hud.fps";
+        super("FPS", 6, 6);
     }
 
     @Override
     public void render(DrawContext ctx) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc == null || mc.textRenderer == null) return;
+        var mc = net.minecraft.client.MinecraftClient.getInstance();
+        int fps = mc.getCurrentFps(); // statik değil!
+        ctx.drawText(mc.textRenderer, "FPS: " + fps, this.x, this.y, 0xFFFFFF, true);
+    }
 
-        int fps = mc.getCurrentFps();
-        ctx.drawTextWithShadow(mc.textRenderer, "FPS: " + fps, getX(), getY(), 0xFFFFFF);
+    @Override
+    public int getWidth(MinecraftClient mc) {
+        return mc.textRenderer.getWidth("FPS: 999");
     }
 }

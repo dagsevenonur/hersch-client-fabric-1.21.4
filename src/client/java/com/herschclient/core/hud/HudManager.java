@@ -17,9 +17,13 @@ public final class HudManager {
         return Collections.unmodifiableList(widgets);
     }
 
+    public List<Widget> getWidgets() {
+        return java.util.Collections.unmodifiableList(this.widgets);
+    }
+
     public void render(DrawContext ctx) {
         for (Widget w : widgets) {
-            if (!w.isVisible()) continue;
+            if (!w.isEnabled()) continue;
             w.render(ctx);
         }
     }
