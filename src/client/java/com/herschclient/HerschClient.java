@@ -5,6 +5,7 @@ import com.herschclient.core.hud.HudManager;
 import com.herschclient.core.module.ModuleManager;
 import com.herschclient.features.hud.*;
 import com.herschclient.features.module.AutoSprintModule;
+import com.herschclient.update.UpdateManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -63,6 +64,8 @@ public final class HerschClient implements ClientModInitializer {
             HUD.render(drawContext);
             EVENT_BUS.postRender2D(drawContext);
         });
+
+        UpdateManager.checkAndDownloadAsync();
 
         System.out.println("[" + CLIENT_NAME + "] Initialized v" + VERSION);
     }
