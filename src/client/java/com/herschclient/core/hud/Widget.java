@@ -3,11 +3,17 @@ package com.herschclient.core.hud;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
+import com.herschclient.core.settings.Setting;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public abstract class Widget {
     protected String name;
     protected boolean enabled = true;
     protected int x, y;
+
+    protected final List<Setting<?>> settings = new ArrayList<>();
 
     public Widget(String name, int x, int y) {
         this.name = name;
@@ -36,6 +42,10 @@ public abstract class Widget {
 
     /** İkon PNG’inin gerçek boyutu (ör: 64x64). Override gerekmez genelde. */
     public int getIconTextureSize() { return 64; }
+
+    public List<Setting<?>> getSettings() {
+        return Collections.unmodifiableList(settings);
+    }
 
     public abstract void render(DrawContext ctx);
 }
