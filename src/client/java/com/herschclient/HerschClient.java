@@ -39,6 +39,8 @@ public final class HerschClient implements ClientModInitializer {
         HUD.register(new KeystrokesWidget());
         HUD.register(new TargetHudWidget());
 
+        MODULES.register(AUTO_SPRINT);
+
         // 2) Config yükle (widgetlar register edildikten sonra!)
         ConfigManager.load();
 

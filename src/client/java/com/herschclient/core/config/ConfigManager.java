@@ -3,6 +3,7 @@ package com.herschclient.core.config;
 import com.google.gson.*;
 import com.herschclient.HerschClient;
 import com.herschclient.core.hud.Widget;
+import com.herschclient.core.module.Module;
 import com.herschclient.core.settings.BoolSetting;
 import com.herschclient.core.settings.FloatSetting;
 import com.herschclient.core.settings.Setting;
@@ -22,7 +23,7 @@ public final class ConfigManager {
         return FabricLoader.getInstance().getConfigDir().resolve(FILE_NAME);
     }
 
-    /** Oyuncu oyuna girince çağır: config oku -> widget + setting uygula */
+    /** Oyuncu oyuna girince çağır: config oku -> widget + module + setting uygula */
     public static void load() {
         Path p = path();
         if (!Files.exists(p)) return;
@@ -31,29 +32,42 @@ public final class ConfigManager {
             String json = Files.readString(p, StandardCharsets.UTF_8);
             JsonObject root = JsonParser.parseString(json).getAsJsonObject();
 
+            // ---------- WIDGETS ----------
             JsonObject widgetsObj = root.has("widgets") ? root.getAsJsonObject("widgets") : null;
-            if (widgetsObj == null) return;
+            if (widgetsObj != null) {
+                for (Widget w : HerschClient.HUD.getWidgets()) {
+                    String key = widgetKey(w);
+                    if (!widgetsObj.has(key)) continue;
 
-            for (Widget w : HerschClient.HUD.getWidgets()) {
-                String key = widgetKey(w);
+                    JsonObject wj = widgetsObj.getAsJsonObject(key);
 
-                if (!widgetsObj.has(key)) continue;
-                JsonObject wj = widgetsObj.getAsJsonObject(key);
+                    // enabled
+                    if (wj.has("enabled")) {
+                        w.setEnabled(wj.get("enabled").getAsBoolean());
+                    }
 
-                // enabled
-                if (wj.has("enabled")) {
-                    w.setEnabled(wj.get("enabled").getAsBoolean());
+                    // position
+                    if (wj.has("x") && wj.has("y")) {
+                        w.setPos(wj.get("x").getAsInt(), wj.get("y").getAsInt());
+                    }
+
+                    // settings
+                    if (wj.has("settings")) {
+                        JsonObject sj = wj.getAsJsonObject("settings");
+                        applySettings(w, sj);
+                    }
                 }
+            }
 
-                // position
-                if (wj.has("x") && wj.has("y")) {
-                    w.setPos(wj.get("x").getAsInt(), wj.get("y").getAsInt());
-                }
+            // ---------- MODULES ----------
+            JsonObject modulesObj = root.has("modules") ? root.getAsJsonObject("modules") : null;
+            if (modulesObj != null) {
+                for (Module m : HerschClient.MODULES.all()) {
+                    String key = moduleKey(m);
+                    if (!modulesObj.has(key)) continue;
 
-                // settings
-                if (wj.has("settings")) {
-                    JsonObject sj = wj.getAsJsonObject("settings");
-                    applySettings(w, sj);
+                    boolean enabled = modulesObj.get(key).getAsBoolean();
+                    m.setEnabled(enabled);
                 }
             }
 
@@ -65,7 +79,7 @@ public final class ConfigManager {
         }
     }
 
-    /** Oyuncu çıkarken çağır: widget + setting oku -> config yaz */
+    /** Oyuncu çıkarken çağır: widget + module + setting oku -> config yaz */
     public static void save() {
         Path p = path();
 
@@ -73,6 +87,7 @@ public final class ConfigManager {
             JsonObject root = new JsonObject();
             root.addProperty("version", HerschClient.VERSION);
 
+            // ---------- WIDGETS ----------
             JsonObject widgetsObj = new JsonObject();
 
             for (Widget w : HerschClient.HUD.getWidgets()) {
@@ -89,8 +104,7 @@ public final class ConfigManager {
                     } else if (s instanceof FloatSetting fs) {
                         sj.addProperty(fs.getKey(), fs.get());
                     } else {
-                        // ileride yeni setting tipi ekleyince burayı genişletirsin
-                        // şimdilik yok sayıyoruz
+                        // yeni setting tipi eklenirse burayı genişlet
                     }
                 }
                 wj.add("settings", sj);
@@ -99,6 +113,13 @@ public final class ConfigManager {
             }
 
             root.add("widgets", widgetsObj);
+
+            // ---------- MODULES ----------
+            JsonObject modulesObj = new JsonObject();
+            for (Module m : HerschClient.MODULES.all()) {
+                modulesObj.addProperty(moduleKey(m), m.isEnabled());
+            }
+            root.add("modules", modulesObj);
 
             Files.createDirectories(p.getParent());
             Files.writeString(p, GSON.toJson(root), StandardCharsets.UTF_8);
@@ -123,14 +144,16 @@ public final class ConfigManager {
                     fs.setClamped(sj.get(k).getAsFloat());
                 }
             } catch (Exception ignored) {
-                // tek bir setting bozuksa tüm load’u patlatmayalım
+                // tek setting bozuksa tüm load’u patlatmayalım
             }
         }
     }
 
     private static String widgetKey(Widget w) {
-        // Şimdilik: widget adı
-        // (istersen sonra Widget'a "id" alanı ekleyip burayı id yaparız)
         return w.getName().toLowerCase();
+    }
+
+    private static String moduleKey(Module m) {
+        return m.getName().toLowerCase();
     }
 }

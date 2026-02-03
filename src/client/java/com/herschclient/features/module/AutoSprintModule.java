@@ -1,36 +1,46 @@
 package com.herschclient.features.module;
 
-import com.herschclient.core.settings.BoolSetting;
+import com.herschclient.core.module.Module;
+import com.herschclient.core.module.ModuleCategory;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
 
-public final class AutoSprintModule {
+public final class AutoSprintModule extends Module {
 
-    public final BoolSetting enabled =
-            new BoolSetting("auto_sprint", "Auto Sprint", true);
+    public AutoSprintModule() {
+        super("Auto Sprint", ModuleCategory.MOVEMENT);
+    }
 
+    /** Tick’te çağıracağız */
     public void onTick(MinecraftClient mc) {
-        if (!enabled.get()) return;
+        if (!isEnabled()) return;
         if (mc == null || mc.player == null) return;
         if (mc.currentScreen != null) return;
 
-        ClientPlayerEntity p = mc.player;
+        var p = mc.player;
 
-        // vanilla-like sprint checks
+        // Basit güvenli koşullar
         if (p.isSpectator()) return;
         if (p.isSneaking()) return;
-        if (!p.isOnGround()) return;
         if (p.isSwimming()) return;
         if (p.hasVehicle()) return;
-
-        // W basılı mı
         if (!mc.options.forwardKey.isPressed()) return;
 
-        // açlık kontrolü (vanilla sprint şartı)
+        // Açlık düşükse sprint atamasın
         if (p.getHungerManager().getFoodLevel() <= 6) return;
 
         if (!p.isSprinting()) {
             p.setSprinting(true);
         }
+    }
+
+    @Override
+    protected void onEnable() {
+        // İstersen log
+        // System.out.println("[HerschClient] Auto Sprint enabled");
+    }
+
+    @Override
+    protected void onDisable() {
+        // System.out.println("[HerschClient] Auto Sprint disabled");
     }
 }
