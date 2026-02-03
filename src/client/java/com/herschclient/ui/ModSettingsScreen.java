@@ -2,13 +2,10 @@ package com.herschclient.ui;
 
 import com.herschclient.HerschClient;
 import com.herschclient.core.hud.Widget;
-import com.herschclient.ui.lunar.LunarButton;
-import com.herschclient.ui.lunar.LunarColors;
-import com.herschclient.ui.lunar.ModuleCardWidget;
-import com.herschclient.ui.lunar.UiDraw;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
@@ -18,212 +15,88 @@ public final class ModSettingsScreen extends Screen {
 
     private final Screen parent;
 
-    // panel geometry (draggable)
-    private int panelW = 560;
-    private int panelH = 320;
-    private int panelX;
-    private int panelY;
+    // Panel layout
+    private int panelX, panelY, panelW, panelH;
+    private int headerH = 26;
+    private int tabsH = 22;
+    private int pad = 10;
 
-    private boolean dragging = false;
-    private int dragOffX, dragOffY;
+    // Grid layout
+    private int cardW = 140;
+    private int cardH = 92;
+    private int gap = 10;
+    private int cols = 3;
 
-    private final List<ModuleCardWidget> cards = new ArrayList<>();
+    // Scroll
+    private int scrollY = 0;
+    private int contentHeight = 0;
 
-    private Integer prevMenuBlur = null;
+    // Tabs (şimdilik sadece ALL + HUD; ileride module kategorilerine bağlarız)
+    private enum Tab { ALL, HUD }
+    private Tab activeTab = Tab.ALL;
+
+    private final List<WidgetCard> cards = new ArrayList<>();
 
     public ModSettingsScreen(Screen parent) {
-        super(Text.literal("")); // kendi header çiziyoruz
+        super(Text.literal("Mod Ayarları"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
-        if (this.client != null && this.client.gameRenderer != null) {
-            this.client.gameRenderer.clearPostProcessor();
-        }
-
-        if (this.client != null) {
-            var opt = this.client.options.getMenuBackgroundBlurriness();
-            this.prevMenuBlur = opt.getValue();
-            opt.setValue(0); // blur = 0
-        }
-
-        cards.clear();
-        this.clearChildren();
-
+        // Panel boyutu: ekran küçülürse otomatik küçül
+        panelW = Math.min(520, this.width - 40);
+        panelH = Math.min(310, this.height - 40);
         panelX = (this.width - panelW) / 2;
         panelY = (this.height - panelH) / 2;
 
-        // Close button (top-right)
-        addDrawableChild(new LunarButton(
-                panelX + panelW - 26, panelY + 8,
-                18, 18,
-                Text.literal("x"),
-                () -> this.client.setScreen(parent),
-                6, 0xFF2B2B2B, 0xFF3A3A3A
-        ) {
-            @Override
-            protected void appendClickableNarrations(NarrationMessageBuilder builder) {
+        // Kolon sayısını panel genişliğine göre ayarla
+        cols = Math.max(2, (panelW - pad * 2) / (cardW + gap));
+        cols = Math.min(cols, 4);
 
-            }
-        });
+        rebuildCards();
+    }
 
-        // Edit HUD Layout (bottom-left inside panel)
-        addDrawableChild(new LunarButton(
-                panelX + 14, panelY + panelH - 26,
-                140, 16,
-                Text.literal("EDIT HUD LAYOUT"),
-                () -> this.client.setScreen(new HudEditScreen(this)),
-                6, 0xFF2B2B2B, 0xFF3A3A3A
-        ) {
-            @Override
-            protected void appendClickableNarrations(NarrationMessageBuilder builder) {
+    private void rebuildCards() {
+        cards.clear();
 
-            }
-        });
-
-
-        // Build cards (HUD widgets)
         List<Widget> widgets = HerschClient.HUD.getWidgets();
 
-        // grid area
-        int gridX = panelX + 170;
-        int gridY = panelY + 64;
-        int cardW = 160;
-        int cardH = 110;
-        int gap = 12;
+        // Tab filtre (şimdilik ALL/HUD aynı; ilerde WidgetCategory eklersen burada filtrelersin)
+        List<Widget> filtered = new ArrayList<>(widgets);
 
-        int col = 0, row = 0;
-        int maxCols = 2; // panelW 560 → orta alan 560-170-14 = 376 → 2 kart güzel durur
+        int contentX = panelX + pad;
+        int contentY = panelY + headerH + tabsH + pad;
+        int contentW = panelW - pad * 2;
 
-        for (Widget w : widgets) {
-            int x = gridX + col * (cardW + gap);
-            int y = gridY + row * (cardH + gap);
+        int col = 0;
+        int row = 0;
 
-            ModuleCardWidget card = new ModuleCardWidget(
-                    x, y, cardW, cardH, w,
-                    () -> {
-                    } // şimdilik boş (options ekranını sonra bağlarız)
-            ) {
-                @Override
-                protected void appendClickableNarrations(NarrationMessageBuilder builder) {
+        for (Widget w : filtered) {
+            int x = contentX + col * (cardW + gap);
+            int y = contentY + row * (cardH + gap);
 
-                }
-            };
-
-            cards.add(card);
-            addDrawableChild(card);
+            cards.add(new WidgetCard(x, y, cardW, cardH, w));
 
             col++;
-            if (col >= maxCols) {
+            if (col >= cols || x + (cardW + gap) > contentX + contentW) {
                 col = 0;
                 row++;
             }
         }
+
+        // içerik yüksekliği (scroll limit için)
+        int rows = (int) Math.ceil(cards.size() / (double) cols);
+        contentHeight = rows * (cardH + gap) - gap;
+        scrollY = clamp(scrollY, 0, Math.max(0, contentHeight - getViewportH()));
     }
 
-    @Override
-    public void removed() {
-        if (this.client != null && prevMenuBlur != null) {
-            this.client.options.getMenuBackgroundBlurriness().setValue(prevMenuBlur);
-        }
-        super.removed();
+    private int getViewportY() {
+        return panelY + headerH + tabsH + pad;
     }
 
-    @Override
-    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Tamamen transparan: hiçbir şey çizme
-    }
-
-    @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (this.client != null && this.client.gameRenderer != null) {
-            this.client.gameRenderer.clearPostProcessor();
-        }
-
-        // panel
-        UiDraw.roundedRect(ctx, panelX, panelY, panelW, panelH, 10, LunarColors.PANEL_BG);
-
-        // header bar
-        ctx.fill(panelX, panelY, panelX + panelW, panelY + 34, LunarColors.HEADER_BG);
-
-        // sidebar
-        ctx.fill(panelX, panelY + 34, panelX + 160, panelY + panelH, LunarColors.SIDEBAR_BG);
-
-        // Header texts (logo placeholder + tabs)
-        ctx.drawTextWithShadow(textRenderer, Text.literal("HERSCH CLIENT"), panelX + 14, panelY + 12, LunarColors.TEXT_MAIN);
-
-        // Tabs
-        drawTab(ctx, "MODS", panelX + 180, panelY + 10, true);
-        drawTab(ctx, "SETTINGS", panelX + 236, panelY + 10, false);
-        drawTab(ctx, "WAYPOINTS", panelX + 320, panelY + 10, false);
-
-        // Sidebar section
-        ctx.drawTextWithShadow(textRenderer, Text.literal("Default"), panelX + 14, panelY + 46, LunarColors.TEXT_MAIN);
-        ctx.drawTextWithShadow(textRenderer, Text.literal("HUD"), panelX + 14, panelY + 70, LunarColors.TEXT_DIM);
-        ctx.drawTextWithShadow(textRenderer, Text.literal("Server"), panelX + 14, panelY + 90, LunarColors.TEXT_DIM);
-        ctx.drawTextWithShadow(textRenderer, Text.literal("Mechanic"), panelX + 14, panelY + 110, LunarColors.TEXT_DIM);
-
-        // Chips + search bar (top middle area)
-        int chipsX = panelX + 170;
-        int chipsY = panelY + 40;
-        drawChip(ctx, "ALL", chipsX, chipsY, true);
-        drawChip(ctx, "NEW", chipsX + 44, chipsY, false);
-        drawChip(ctx, "HUD", chipsX + 88, chipsY, true);
-        drawChip(ctx, "SERVER", chipsX + 132, chipsY, false);
-
-        // search
-        UiDraw.roundedRect(ctx, panelX + panelW - 190, panelY + 38, 160, 18, 7, 0xFF2A2A2A);
-        ctx.drawTextWithShadow(textRenderer, Text.literal("Search..."), panelX + panelW - 180, panelY + 43, LunarColors.TEXT_DIM);
-
-        super.render(ctx, mouseX, mouseY, delta);
-    }
-
-    private void drawTab(DrawContext ctx, String text, int x, int y, boolean active) {
-        int w = textRenderer.getWidth(text) + 14;
-        int bg = active ? 0xFF2E2E2E : 0xFF232323;
-        UiDraw.roundedRect(ctx, x, y, w, 16, 6, bg);
-        ctx.drawTextWithShadow(textRenderer, Text.literal(text), x + 7, y + 4, active ? LunarColors.TEXT_MAIN : LunarColors.TEXT_DIM);
-    }
-
-    private void drawChip(DrawContext ctx, String text, int x, int y, boolean active) {
-        int w = textRenderer.getWidth(text) + 14;
-        int bg = active ? LunarColors.CHIP_BG_ON : LunarColors.CHIP_BG;
-        UiDraw.roundedRect(ctx, x, y, w, 16, 6, bg);
-        ctx.drawTextWithShadow(textRenderer, Text.literal(text), x + 7, y + 4, LunarColors.TEXT_MAIN);
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // dragging: header bar alanı
-        if (button == 0) {
-            boolean onHeader = mouseX >= panelX && mouseX <= panelX + panelW && mouseY >= panelY && mouseY <= panelY + 34;
-            if (onHeader) {
-                dragging = true;
-                dragOffX = (int) mouseX - panelX;
-                dragOffY = (int) mouseY - panelY;
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0) dragging = false;
-        return super.mouseReleased(mouseX, mouseY, button);
-    }
-
-    @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
-        if (dragging) {
-            panelX = (int) mouseX - dragOffX;
-            panelY = (int) mouseY - dragOffY;
-            // çocuk widgetlar panelin coordinate’lerine bağlı olduğu için: yeniden init
-            this.init(this.client, this.width, this.height);
-            return true;
-        }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+    private int getViewportH() {
+        return panelH - headerH - tabsH - pad - pad;
     }
 
     @Override
@@ -236,7 +109,283 @@ public final class ModSettingsScreen extends Screen {
         return false;
     }
 
-    public boolean shouldRenderInGame() {
+    // Blur / arka plan istemiyoruz -> renderBackground ÇAĞIRMIYORUZ
+    @Override
+    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+
+        // Panel arka plan (semi-transparent)
+        fill(ctx, panelX, panelY, panelX + panelW, panelY + panelH, 0xB0121212);
+        // İnce border
+        drawBorder(ctx, panelX, panelY, panelW, panelH, 0xFF2B2B2B);
+
+        // Header
+        fill(ctx, panelX, panelY, panelX + panelW, panelY + headerH, 0xCC1A1A1A);
+        ctx.drawTextWithShadow(textRenderer, "HERSCHCLIENT", panelX + 10, panelY + 9, 0xFFECECEC);
+
+        // Sağ üst kapat butonu (X)
+        int closeSize = 16;
+        int closeX = panelX + panelW - closeSize - 8;
+        int closeY = panelY + 5;
+        boolean closeHover = inRect(mouseX, mouseY, closeX, closeY, closeSize, closeSize);
+        fill(ctx, closeX, closeY, closeX + closeSize, closeY + closeSize, closeHover ? 0xFF3A3A3A : 0xFF2A2A2A);
+        ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("x"), closeX + closeSize / 2, closeY + 4, 0xFFFFFFFF);
+
+        // Tabs
+        int tabsY = panelY + headerH;
+        fill(ctx, panelX, tabsY, panelX + panelW, tabsY + tabsH, 0xAA141414);
+
+        drawTab(ctx, "ALL", Tab.ALL, panelX + 10, tabsY + 4, mouseX, mouseY);
+        drawTab(ctx, "HUD", Tab.HUD, panelX + 54, tabsY + 4, mouseX, mouseY);
+
+        // HUD Layout button (alt sol)
+        int hudBtnW = 130;
+        int hudBtnH = 16;
+        int hudBtnX = panelX + 10;
+        int hudBtnY = panelY + panelH - hudBtnH - 8;
+        boolean hudHover = inRect(mouseX, mouseY, hudBtnX, hudBtnY, hudBtnW, hudBtnH);
+        fill(ctx, hudBtnX, hudBtnY, hudBtnX + hudBtnW, hudBtnY + hudBtnH, hudHover ? 0xFF2E5CFF : 0xFF2747C9);
+        ctx.drawTextWithShadow(textRenderer, "EDIT HUD LAYOUT", hudBtnX + 8, hudBtnY + 4, 0xFFFFFFFF);
+
+        // Scissor: sadece içerik alanında kartlar görünsün (scroll için şart)
+        int vpX1 = panelX + pad;
+        int vpY1 = getViewportY();
+        int vpX2 = panelX + panelW - pad;
+        int vpY2 = vpY1 + getViewportH();
+
+        ctx.enableScissor(vpX1, vpY1, vpX2, vpY2);
+
+        // Kartlar
+        for (WidgetCard c : cards) {
+            c.render(ctx, mouseX, mouseY, scrollY, this.textRenderer);
+        }
+
+        ctx.disableScissor();
+
+        super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    private void drawTab(DrawContext ctx, String label, Tab tab, int x, int y, int mouseX, int mouseY) {
+        int w = 36;
+        int h = 14;
+        boolean hover = inRect(mouseX, mouseY, x, y, w, h);
+
+        int bg;
+        if (activeTab == tab) bg = 0xFF3B72FF;
+        else bg = hover ? 0xFF2C2C2C : 0xFF222222;
+
+        fill(ctx, x, y, x + w, y + h, bg);
+        ctx.drawTextWithShadow(textRenderer, label, x + 10, y + 3, 0xFFFFFFFF);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int mx = (int) mouseX;
+        int my = (int) mouseY;
+
+        // Close
+        int closeSize = 16;
+        int closeX = panelX + panelW - closeSize - 8;
+        int closeY = panelY + 5;
+        if (inRect(mx, my, closeX, closeY, closeSize, closeSize)) {
+            close();
+            return true;
+        }
+
+        // Tabs
+        int tabsY = panelY + headerH;
+        if (inRect(mx, my, panelX + 10, tabsY + 4, 36, 14)) {
+            activeTab = Tab.ALL;
+            rebuildCards();
+            return true;
+        }
+        if (inRect(mx, my, panelX + 54, tabsY + 4, 36, 14)) {
+            activeTab = Tab.HUD;
+            rebuildCards();
+            return true;
+        }
+
+        // HUD Layout
+        int hudBtnW = 130;
+        int hudBtnH = 16;
+        int hudBtnX = panelX + 10;
+        int hudBtnY = panelY + panelH - hudBtnH - 8;
+        if (inRect(mx, my, hudBtnX, hudBtnY, hudBtnW, hudBtnH)) {
+            this.client.setScreen(new HudEditScreen(this));
+            return true;
+        }
+
+        // Cards click
+        for (WidgetCard c : cards) {
+            if (c.mouseClicked(mx, my, scrollY, this.client)) return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        // sadece panel içindeyken scroll
+        if (!inRect((int) mouseX, (int) mouseY, panelX, panelY, panelW, panelH)) return false;
+
+        int maxScroll = Math.max(0, contentHeight - getViewportH());
+        scrollY = clamp(scrollY - (int) (verticalAmount * 18), 0, maxScroll);
         return true;
+    }
+
+    // ---------- küçük util ----------
+
+    private static void fill(DrawContext ctx, int x1, int y1, int x2, int y2, int argb) {
+        ctx.fill(x1, y1, x2, y2, argb);
+    }
+
+    private static void drawBorder(DrawContext ctx, int x, int y, int w, int h, int argb) {
+        // top
+        ctx.fill(x, y, x + w, y + 1, argb);
+        // bottom
+        ctx.fill(x, y + h - 1, x + w, y + h, argb);
+        // left
+        ctx.fill(x, y, x + 1, y + h, argb);
+        // right
+        ctx.fill(x + w - 1, y, x + w, y + h, argb);
+    }
+
+    private static boolean inRect(int mx, int my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
+    }
+
+    private static int clamp(int v, int min, int max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
+    // ---------- Kart ----------
+
+    private static final class WidgetCard {
+        private final int x, y, w, h;
+        private final Widget widget;
+
+        // alt bar
+        private final int barH = 18;
+
+        WidgetCard(int x, int y, int w, int h, Widget widget) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+            this.widget = widget;
+        }
+
+        void render(DrawContext ctx, int mouseX, int mouseY, int scrollY, net.minecraft.client.font.TextRenderer tr) {
+            int ry = y - scrollY;
+
+            boolean hover = mouseX >= x && mouseX < x + w && mouseY >= ry && mouseY < ry + h;
+
+            // card bg
+            ctx.fill(x, ry, x + w, ry + h, hover ? 0xCC202020 : 0xBB1C1C1C);
+            // border
+            ctx.fill(x, ry, x + w, ry + 1, 0xFF2B2B2B);
+            ctx.fill(x, ry + h - 1, x + w, ry + h, 0xFF2B2B2B);
+            ctx.fill(x, ry, x + 1, ry + h, 0xFF2B2B2B);
+            ctx.fill(x + w - 1, ry, x + w, ry + h, 0xFF2B2B2B);
+
+            // Title
+            String name = widget.getName();
+            ctx.drawCenteredTextWithShadow(tr, Text.literal(name), x + w / 2, ry + 18, 0xFFEAEAEA);
+
+            int iconSize = 26;
+            int iconX = x + (w - iconSize) / 2;
+            int iconY = ry + 34;
+
+            var icon = widget.getIcon();
+            if (icon != null) {
+                int texSize = widget.getIconTextureSize(); // 64 gibi
+                // Arka “plate” (isteğe bağlı, ikonu öne çıkarıyor)
+                ctx.fill(iconX - 4, iconY - 4, iconX + iconSize + 4, iconY + iconSize + 4, 0xFF2A2A2A);
+
+                // Texture çizimi
+                ctx.drawTexture(
+                        RenderLayer::getGuiTextured,
+                        icon,
+                        iconX,
+                        iconY,
+                        0f,
+                        0f,
+                        iconSize,
+                        iconSize,
+                        texSize,
+                        texSize
+                );
+
+            } else {
+                // Fallback: ikon yoksa boş kutu
+                ctx.fill(iconX - 4, iconY - 4, iconX + iconSize + 4, iconY + iconSize + 4, 0xFF2A2A2A);
+            }
+
+            // Bottom bar
+            int barY = ry + h - barH;
+            ctx.fill(x, barY, x + w, barY + barH, 0xFF171717);
+
+            // Options button (sol)
+            int optX = x + 6;
+            int optY = barY + 3;
+            int optW = 70;
+            int optH = 12;
+            boolean optHover = inRect(mouseX, mouseY, optX, optY, optW, optH);
+            ctx.fill(optX, optY, optX + optW, optY + optH, optHover ? 0xFF2A2A2A : 0xFF202020);
+            ctx.drawTextWithShadow(tr, "OPTIONS", optX + 10, optY + 2, 0xFFDADADA);
+
+            // Enabled toggle (sağ)
+            int enW = 54;
+            int enH = 12;
+            int enX = x + w - enW - 6;
+            int enY = optY;
+
+            boolean enHover = inRect(mouseX, mouseY, enX, enY, enW, enH);
+
+            int bg = widget.isEnabled() ? 0xFF1F8F4E : 0xFF3A3A3A;
+            if (enHover) bg = widget.isEnabled() ? 0xFF22A85B : 0xFF4A4A4A;
+
+            ctx.fill(enX, enY, enX + enW, enY + enH, bg);
+            ctx.drawCenteredTextWithShadow(tr, Text.literal("ENABLED"), enX + enW / 2, enY + 2, 0xFFFFFFFF);
+        }
+
+        boolean mouseClicked(int mx, int my, int scrollY, MinecraftClient mc) {
+            int ry = y - scrollY;
+
+            // Options
+            int barH = 18;
+            int barY = ry + h - barH;
+            int optX = x + 6;
+            int optY = barY + 3;
+            int optW = 70;
+            int optH = 12;
+
+            if (inRect(mx, my, optX, optY, optW, optH)) {
+                // Şimdilik: options tıklanınca HUD edit açalım (ileride widget özel settings)
+                mc.setScreen(new HudEditScreen(mc.currentScreen));
+                return true;
+            }
+
+            // Enabled
+            int enW = 54;
+            int enH = 12;
+            int enX = x + w - enW - 6;
+            int enY = optY;
+
+            if (inRect(mx, my, enX, enY, enW, enH)) {
+                widget.setEnabled(!widget.isEnabled());
+                return true;
+            }
+
+            return false;
+        }
+
+        private static boolean inRect(int mx, int my, int x, int y, int w, int h) {
+            return mx >= x && mx < x + w && my >= y && my < y + h;
+        }
+    }
+
+    @Override
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        // Tamamen transparan: hiçbir şey çizme
     }
 }

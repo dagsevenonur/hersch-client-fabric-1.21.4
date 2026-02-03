@@ -3,6 +3,7 @@ package com.herschclient.features.hud;
 import com.herschclient.core.hud.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.util.Identifier;
 
 public final class FpsWidget extends Widget {
 
@@ -20,5 +21,15 @@ public final class FpsWidget extends Widget {
     @Override
     public int getWidth(MinecraftClient mc) {
         return mc.textRenderer.getWidth("FPS: 999");
+    }
+
+    @Override
+    public Identifier getIcon() {
+        return Identifier.of("herschclient", "textures/gui/icons/fps.png");
+    }
+
+    @Override
+    public int getIconTextureSize() {
+        return 64; // fps.png 64x64 ise
     }
 }
