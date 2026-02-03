@@ -7,7 +7,8 @@ import com.herschclient.features.hud.FpsWidget;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
+import com.herschclient.core.config.ConfigManager;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 
 public final class HerschClient implements ClientModInitializer {
 
@@ -21,6 +22,14 @@ public final class HerschClient implements ClientModInitializer {
     public void onInitializeClient() {
         // 1) HUD widget kaydı
         HUD.register(new FpsWidget());
+
+        // 2) Config yükle (widgetlar register edildikten sonra!)
+        ConfigManager.load();
+
+        // 3) Kapanırken otomatik kaydet
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            ConfigManager.save();
+        });
 
         // 2) Tick event
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
