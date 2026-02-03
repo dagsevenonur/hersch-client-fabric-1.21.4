@@ -4,6 +4,7 @@ import com.herschclient.core.event.EventBus;
 import com.herschclient.core.hud.HudManager;
 import com.herschclient.core.module.ModuleManager;
 import com.herschclient.features.hud.*;
+import com.herschclient.features.module.AutoSprintModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -18,6 +19,10 @@ public final class HerschClient implements ClientModInitializer {
     public static final EventBus EVENT_BUS = new EventBus();
     public static final ModuleManager MODULES = new ModuleManager();
     public static final HudManager HUD = new HudManager();
+
+    public static final AutoSprintModule AUTO_SPRINT = new AutoSprintModule();
+
+
     @Override
     public void onInitializeClient() {
         // 1) HUD widget kaydı
@@ -45,6 +50,8 @@ public final class HerschClient implements ClientModInitializer {
         // 2) Tick event
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             EVENT_BUS.postTick(client);
+
+            AUTO_SPRINT.onTick(client);
         });
 
         // 3) Render2D event (HUD çizimi)
