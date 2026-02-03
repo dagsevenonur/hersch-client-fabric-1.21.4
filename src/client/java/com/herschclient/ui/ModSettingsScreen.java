@@ -120,7 +120,7 @@ public final class ModSettingsScreen extends Screen {
 
         // Header
         fill(ctx, panelX, panelY, panelX + panelW, panelY + headerH, 0xCC1A1A1A);
-        ctx.drawTextWithShadow(textRenderer, "HERSCHCLIENT", panelX + 10, panelY + 9, 0xFFECECEC);
+        ctx.drawTextWithShadow(textRenderer, "HERSCH CLIENT", panelX + 10, panelY + 9, 0xFFECECEC);
 
         // Sağ üst kapat butonu (X)
         int closeSize = 16;
@@ -144,7 +144,13 @@ public final class ModSettingsScreen extends Screen {
         int hudBtnY = panelY + panelH - hudBtnH - 8;
         boolean hudHover = inRect(mouseX, mouseY, hudBtnX, hudBtnY, hudBtnW, hudBtnH);
         fill(ctx, hudBtnX, hudBtnY, hudBtnX + hudBtnW, hudBtnY + hudBtnH, hudHover ? 0xFF2E5CFF : 0xFF2747C9);
-        ctx.drawTextWithShadow(textRenderer, "EDIT HUD LAYOUT", hudBtnX + 8, hudBtnY + 4, 0xFFFFFFFF);
+        ctx.drawCenteredTextWithShadow(
+                textRenderer,
+                "EDIT HUD LAYOUT",
+                hudBtnX + hudBtnW / 2,
+                hudBtnY + (hudBtnH - textRenderer.fontHeight) / 2,
+                0xFFFFFF
+        );
 
         // Scissor: sadece içerik alanında kartlar görünsün (scroll için şart)
         int vpX1 = panelX + pad;
@@ -282,16 +288,16 @@ public final class ModSettingsScreen extends Screen {
             // card bg
             ctx.fill(x, ry, x + w, ry + h, hover ? 0xCC202020 : 0xBB1C1C1C);
             // border
-            ctx.fill(x, ry, x + w, ry + 1, 0xFF2B2B2B);
-            ctx.fill(x, ry + h - 1, x + w, ry + h, 0xFF2B2B2B);
-            ctx.fill(x, ry, x + 1, ry + h, 0xFF2B2B2B);
-            ctx.fill(x + w - 1, ry, x + w, ry + h, 0xFF2B2B2B);
+            // üst
+            ctx.fill(x, y, x + w, y + 1, 0xFF2B2B2B);
+            // alt
+            ctx.fill(x, y + h - 1, x + w, y + h, 0xFF2B2B2B);
+            // sol
+            ctx.fill(x, y, x + 1, y + h, 0xFF2B2B2B);
+            // sağ
+            ctx.fill(x + w - 1, y, x + w, y + h, 0xFF2B2B2B);
 
-            // Title
-            String name = widget.getName();
-            ctx.drawCenteredTextWithShadow(tr, Text.literal(name), x + w / 2, ry + 18, 0xFFEAEAEA);
-
-            int iconSize = 26;
+            int iconSize = 48;
             int iconX = x + (w - iconSize) / 2;
             int iconY = ry + 34;
 
@@ -319,6 +325,10 @@ public final class ModSettingsScreen extends Screen {
                 // Fallback: ikon yoksa boş kutu
                 ctx.fill(iconX - 4, iconY - 4, iconX + iconSize + 4, iconY + iconSize + 4, 0xFF2A2A2A);
             }
+
+            // Title
+            String name = widget.getName();
+            ctx.drawCenteredTextWithShadow(tr, Text.literal(name), x + w / 2, ry + 18, 0xFFEAEAEA);
 
             // Bottom bar
             int barY = ry + h - barH;
