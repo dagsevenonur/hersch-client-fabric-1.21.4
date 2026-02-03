@@ -371,8 +371,12 @@ public final class ModSettingsScreen extends Screen {
             int optH = 12;
 
             if (inRect(mx, my, optX, optY, optW, optH)) {
-                // Şimdilik: options tıklanınca HUD edit açalım (ileride widget özel settings)
-                mc.setScreen(new HudEditScreen(mc.currentScreen));
+                if (!widget.getSettings().isEmpty()) {
+                    mc.setScreen(new WidgetOptionsScreen(mc.currentScreen, widget));
+                } else {
+                    // settings yoksa fallback: HUD edit
+                    mc.setScreen(new HudEditScreen(mc.currentScreen));
+                }
                 return true;
             }
 
