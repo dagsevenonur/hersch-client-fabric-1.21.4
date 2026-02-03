@@ -24,6 +24,11 @@ public final class ModSettingsScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+
+    }
+
+    @Override
     protected void init() {
         int px = (this.width - panelW) / 2;
         int py = (this.height - panelH) / 2;

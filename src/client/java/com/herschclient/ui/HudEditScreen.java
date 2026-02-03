@@ -21,6 +21,11 @@ public final class HudEditScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+
+    }
+
+    @Override
     public boolean shouldPause() {
         return false;
     }

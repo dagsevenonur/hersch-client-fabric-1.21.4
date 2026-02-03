@@ -2,6 +2,7 @@ package com.herschclient.mixin.client;
 
 import com.herschclient.ui.ModSettingsScreen;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -31,5 +32,14 @@ public abstract class GameMenuScreenMixin extends Screen {
                 Text.literal("MOD AYARLARI"),
                 btn -> MinecraftClient.getInstance().setScreen(new ModSettingsScreen(this))
         ).dimensions(x, y, w, h).build());
+    }
+
+    @Inject(method = "renderBackground", at = @At("HEAD"), cancellable = true)
+    private void herschclient$noBlurBackground(DrawContext ctx, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        // Blur'u tamamen iptal et
+        ci.cancel();
+
+        // İstersen hafif karartma overlay'i bırak (blur yok)
+        ctx.fill(0, 0, this.width, this.height, 0xAA000000);
     }
 }
