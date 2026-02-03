@@ -42,4 +42,12 @@ public abstract class GameMenuScreenMixin extends Screen {
         // İstersen hafif karartma overlay'i bırak (blur yok)
         ctx.fill(0, 0, this.width, this.height, 0xAA000000);
     }
+
+    @Inject(method = "init", at = @At("TAIL"))
+    private void herschclient$disableBlur(CallbackInfo ci) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc != null && mc.gameRenderer != null) {
+            mc.gameRenderer.clearPostProcessor();
+        }
+    }
 }
