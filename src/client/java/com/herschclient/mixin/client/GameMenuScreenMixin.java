@@ -20,10 +20,16 @@ public abstract class GameMenuScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void herschclient$addButton(CallbackInfo ci) {
+        int w = 204;
+        int h = 20;
+        int x = this.width / 2 - w / 2;
+
+        // Senin mevcut yerin aynı kalsın:
+        int y = this.height / 4 + 120 + 8;
+
         this.addDrawableChild(ButtonWidget.builder(
                 Text.literal("MOD AYARLARI"),
                 btn -> MinecraftClient.getInstance().setScreen(new ModSettingsScreen(this))
-        ).dimensions(this.width / 2 - 100, this.height / 4 + 120, 200, 20).build());
+        ).dimensions(x, y, w, h).build());
     }
 }
-

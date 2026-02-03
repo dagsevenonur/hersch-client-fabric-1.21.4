@@ -17,7 +17,6 @@ public final class HerschClient implements ClientModInitializer {
     public static final EventBus EVENT_BUS = new EventBus();
     public static final ModuleManager MODULES = new ModuleManager();
     public static final HudManager HUD = new HudManager();
-
     @Override
     public void onInitializeClient() {
         // 1) HUD widget kaydı
