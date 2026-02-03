@@ -3,8 +3,7 @@ package com.herschclient;
 import com.herschclient.core.event.EventBus;
 import com.herschclient.core.hud.HudManager;
 import com.herschclient.core.module.ModuleManager;
-import com.herschclient.features.hud.CpsWidget;
-import com.herschclient.features.hud.FpsWidget;
+import com.herschclient.features.hud.*;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -24,6 +23,16 @@ public final class HerschClient implements ClientModInitializer {
         // 1) HUD widget kaydı
         HUD.register(new FpsWidget());
         HUD.register(new CpsWidget());
+        HUD.register(new CoordinatesWidget());
+        HUD.register(new ClockWidget());
+        HUD.register(new PingWidget());
+        HUD.register(new DirectionWidget());
+        HUD.register(new ArmorStatusWidget());
+        HUD.register(new HeldItemDurabilityWidget());
+        HUD.register(new PotionEffectsWidget());
+        HUD.register(new ServerInfoWidget());
+        HUD.register(new KeystrokesWidget());
+        HUD.register(new TargetHudWidget());
 
         // 2) Config yükle (widgetlar register edildikten sonra!)
         ConfigManager.load();
