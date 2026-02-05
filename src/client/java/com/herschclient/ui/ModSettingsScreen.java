@@ -426,6 +426,10 @@ public final class ModSettingsScreen extends Screen {
         private final Widget widget;
         private int panelX, panelY, panelW, panelH;
         private String draggingKey = null;
+        
+        // Scroll
+        private int scrollY = 0;
+        private int contentHeight = 0;
 
         protected WidgetOptionsScreen(Screen parent, Widget widget) {
             super(Text.literal("Options"));
@@ -439,6 +443,14 @@ public final class ModSettingsScreen extends Screen {
             panelH = 200;
             panelX = (this.width - panelW) / 2;
             panelY = (this.height - panelH) / 2;
+            
+            // Calculate content height
+            int h = 0;
+            for (Setting<?> s : widget.getSettings()) {
+                if (s instanceof BoolSetting) h += 24;
+                else if (s instanceof FloatSetting) h += 28; // 12 label + 16 slider
+            }
+            contentHeight = h;
         }
 
         @Override
@@ -450,7 +462,7 @@ public final class ModSettingsScreen extends Screen {
         public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
             this.renderBackground(ctx, mouseX, mouseY, delta);
             
-            // Sharp Settings Panel
+            // Main Panel
             ctx.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xFF181818);
             drawSharpOutline(ctx, panelX, panelY, panelW, panelH, 0xFF2A2A2A);
             
@@ -465,11 +477,25 @@ public final class ModSettingsScreen extends Screen {
             ctx.fill(closeX, closeY, closeX + 12, closeY + 12, hoverClose ? 0xFF991111 : 0xFF353535);
             ctx.drawCenteredTextWithShadow(textRenderer, "x", closeX + 6, closeY + 2, 0xFFFFFFFF);
 
-            int y = panelY + 40;
+            // SCISSOR START
+            // Clip content to the area below header
+            int contentY = panelY + 30;
+            int contentH = panelH - 35; // leave small bottom padding
+            
+            ctx.enableScissor(panelX, contentY, panelX + panelW, contentY + contentH);
+
+            int y = (panelY + 40) - scrollY;
             int x = panelX + 12;
             int w = panelW - 24;
 
             for (Setting<?> s : widget.getSettings()) {
+                // Optimization: don't render if out of view
+                int itemH = (s instanceof BoolSetting) ? 24 : 28;
+                if (y + itemH < contentY || y > contentY + contentH) {
+                    y += itemH;
+                    continue;
+                }
+
                 if (s instanceof BoolSetting bs) {
                     ctx.drawTextWithShadow(textRenderer, bs.getDisplayName(), x, y + 4, 0xFFCCCCCC);
                     
@@ -500,7 +526,23 @@ public final class ModSettingsScreen extends Screen {
                 }
             }
             
-            //super.render(ctx, mouseX, mouseY, delta);
+            ctx.disableScissor();
+            // SCISSOR END
+            
+            // Scrollbar (if needed)
+            if (contentHeight > contentH) {
+                int barX = panelX + panelW - 6;
+                int barY = contentY;
+                int barW = 2;
+                int barH = contentH;
+                
+                float ratio = (float) contentH / contentHeight;
+                int thumbH = Math.max(20, (int) (barH * ratio));
+                int thumbY = barY + (int) ((float) scrollY / (contentHeight - contentH) * (barH - thumbH));
+                
+                ctx.fill(barX, barY, barX + barW, barY + barH, 0xFF202020);
+                ctx.fill(barX, thumbY, barX + barW, thumbY + thumbH, 0xFF505050);
+            }
         }
 
         @Override
@@ -515,8 +557,11 @@ public final class ModSettingsScreen extends Screen {
                 close();
                 return true;
             }
+            
+            // Check if click is within content area
+            if (my < panelY + 30 || my > panelY + panelH - 5) return false;
 
-            int y = panelY + 40;
+            int y = (panelY + 40) - scrollY;
             int x = panelX + 12;
             int w = panelW - 24;
             
@@ -562,6 +607,17 @@ public final class ModSettingsScreen extends Screen {
             return super.mouseDragged(mouseX, mouseY, button, dx, dy);
         }
         
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+            int contentH = panelH - 35;
+            if (contentHeight > contentH) {
+                int maxScroll = contentHeight - contentH + 20; // +20 padding
+                scrollY = Math.max(0, Math.min(maxScroll, scrollY - (int)(verticalAmount * 20)));
+                return true;
+            }
+            return false;
+        }
+
         private void updateSlider(FloatSetting fs, int mx, int x, int w) {
             float t = (float)(mx - x) / w;
             if (t < 0) t = 0;
@@ -569,6 +625,11 @@ public final class ModSettingsScreen extends Screen {
             float v = fs.min() + (fs.max() - fs.min()) * t;
             fs.setClamped(v);
             ConfigManager.save();
+        }
+        
+        @Override
+        public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+             ctx.fillGradient(0, 0, this.width, this.height, 0x80000000, 0x90000000);
         }
    }
 
