@@ -20,8 +20,8 @@ import java.time.Duration;
 public final class UpdateManager {
 
     // Repo bilgini buraya yaz
-    private static final String OWNER = "YOUR_GITHUB_USERNAME_OR_ORG";
-    private static final String REPO  = "YOUR_REPO_NAME";
+    private static final String OWNER = "dagsevenonur";
+    private static final String REPO  = "hersch-client-fabric-1.21.4";
 
     // Release asset seçimi: istersen jar adını sabitle (örn: herschclient.jar) daha sağlam olur
     private static final String ASSET_SUFFIX = ".jar";
