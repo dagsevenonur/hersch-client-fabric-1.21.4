@@ -40,8 +40,18 @@ public final class PotionEffectsWidget extends Widget {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
 
+        boolean isEditing = mc.currentScreen instanceof com.herschclient.ui.HudEditScreen;
         List<StatusEffectInstance> effects = new ArrayList<>(mc.player.getStatusEffects());
-        if (effects.isEmpty()) return;
+        
+        if (effects.isEmpty()) {
+            if (isEditing) {
+                // Dummy effects
+                effects.add(new StatusEffectInstance(net.minecraft.entity.effect.StatusEffects.SPEED, 1200, 1));
+                effects.add(new StatusEffectInstance(net.minecraft.entity.effect.StatusEffects.STRENGTH, 2400, 0));
+            } else {
+                return;
+            }
+        }
 
         effects.sort(Comparator.comparing(
                 e -> e.getEffectType().value().getName().getString()

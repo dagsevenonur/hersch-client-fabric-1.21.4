@@ -44,22 +44,27 @@ public final class TargetHudWidget extends Widget {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
 
+        boolean isEditing = mc.currentScreen instanceof com.herschclient.ui.HudEditScreen;
         LivingEntity target = (mc.targetedEntity instanceof LivingEntity le) ? le : null;
-        if (target == null || !target.isAlive()) return;
+        
+        // Dummy data for editing
+        if (target == null || !target.isAlive()) {
+             if (!isEditing) return;
+        }
 
         float sc = scale.get();
         int pad = Math.round(padding.get());
 
-        String name = target.getName().getString();
-        float hp = target.getHealth();
-        float max = target.getMaxHealth();
+        String name = (target != null) ? target.getName().getString() : "Zombie";
+        float hp = (target != null) ? target.getHealth() : 20.0f;
+        float max = (target != null) ? target.getMaxHealth() : 20.0f;
 
         String line1 = name;
         String line2 = String.format("HP: %.1f / %.1f", hp, max);
 
         String line3 = "";
         if (showDistance.get()) {
-            double d = mc.player.distanceTo(target);
+            double d = (target != null && mc.player != null) ? mc.player.distanceTo(target) : 8.5;
             line3 = String.format("Dist: %.1f", d);
         }
 

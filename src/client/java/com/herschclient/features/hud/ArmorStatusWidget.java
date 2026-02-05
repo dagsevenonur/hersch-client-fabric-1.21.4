@@ -39,6 +39,14 @@ public final class ArmorStatusWidget extends Widget {
         ItemStack legs  = mc.player.getInventory().getArmorStack(1);
         ItemStack chest = mc.player.getInventory().getArmorStack(2);
         ItemStack helm  = mc.player.getInventory().getArmorStack(3);
+        
+        boolean isEditing = mc.currentScreen instanceof com.herschclient.ui.HudEditScreen;
+        if (isEditing) {
+            if (boots.isEmpty()) boots = new ItemStack(net.minecraft.item.Items.DIAMOND_BOOTS);
+            if (legs.isEmpty())  legs  = new ItemStack(net.minecraft.item.Items.DIAMOND_LEGGINGS);
+            if (chest.isEmpty()) chest = new ItemStack(net.minecraft.item.Items.DIAMOND_CHESTPLATE);
+            if (helm.isEmpty())  helm  = new ItemStack(net.minecraft.item.Items.DIAMOND_HELMET);
+        }
 
         String text =
                 "H:" + fmt(helm) + " " +

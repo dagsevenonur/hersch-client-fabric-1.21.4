@@ -36,8 +36,17 @@ public final class HeldItemDurabilityWidget extends Widget {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
 
+        boolean isEditing = mc.currentScreen instanceof com.herschclient.ui.HudEditScreen;
         ItemStack s = mc.player.getMainHandStack();
-        if (s == null || s.isEmpty() || !s.isDamageable()) return;
+        
+        if (s == null || s.isEmpty() || !s.isDamageable()) {
+            if (isEditing) {
+                s = new ItemStack(net.minecraft.item.Items.DIAMOND_SWORD);
+                s.setDamage(100);
+            } else {
+                return;
+            }
+        }
 
         int max = s.getMaxDamage();
         int dmg = s.getDamage();

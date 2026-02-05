@@ -45,10 +45,18 @@ public final class ServerInfoWidget extends Widget {
         int players = -1;
         int ping = -1;
 
+        boolean isEditing = mc.currentScreen instanceof com.herschclient.ui.HudEditScreen;
+        
         if (mc.getNetworkHandler() != null) {
             players = mc.getNetworkHandler().getPlayerList().size();
             PlayerListEntry me = mc.getNetworkHandler().getPlayerListEntry(mc.player.getUuid());
             if (me != null) ping = me.getLatency();
+        }
+        
+        if (isEditing) {
+             if (sp || addr.equals("Singleplayer")) addr = "play.hersch.com";
+             if (players < 0) players = 123;
+             if (ping < 0) ping = 45;
         }
 
         StringBuilder sb = new StringBuilder();

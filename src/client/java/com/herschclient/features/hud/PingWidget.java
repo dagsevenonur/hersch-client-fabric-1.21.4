@@ -36,8 +36,13 @@ public final class PingWidget extends Widget {
         PlayerListEntry entry = mc.getNetworkHandler().getPlayerListEntry(mc.player.getUuid());
         int ping = entry != null ? entry.getLatency() : -1;
 
+        boolean isEditing = mc.currentScreen instanceof com.herschclient.ui.HudEditScreen;
+        
         String text;
-        if (ping < 0) text = showLabel.get() ? "PING: ?" : "?";
+        if (ping < 0) {
+            if (isEditing) text = showLabel.get() ? "PING: 50ms" : "50ms";
+            else text = showLabel.get() ? "PING: ?" : "?";
+        }
         else text = showLabel.get() ? ("PING: " + ping + "ms") : (ping + "ms");
 
         drawTextBox(ctx, text);
