@@ -69,21 +69,13 @@ public final class HudEditScreen extends Screen {
 
             // Colors
             int borderColor = 0x40FFFFFF; // Faint white
-            int bgColor = 0x00000000;
-
+            
             if (hover || isDragging) {
                 borderColor = 0xFF3B72FF; // Hersch Blue
-                bgColor = 0x203B72FF;     // Semi-transparent blue fill
             }
 
-            // Draw box
-            ctx.fill(x, y, x + ww, y + hh, bgColor);
-            
-            // Border (using simple logic for now, could use UiDraw)
-            ctx.fill(x - 1, y - 1, x + ww + 1, y, borderColor);          // Top
-            ctx.fill(x - 1, y + hh, x + ww + 1, y + hh + 1, borderColor);// Bottom
-            ctx.fill(x - 1, y, x, y + hh, borderColor);                  // Left
-            ctx.fill(x + ww, y, x + ww + 1, y + hh, borderColor);        // Right
+            // Draw border only (no fill as requested)
+            drawSharpOutline(ctx, x, y, ww, hh, borderColor);
 
             // Coordinates on drag
             if (isDragging || hover) {
@@ -176,5 +168,12 @@ public final class HudEditScreen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private static void drawSharpOutline(DrawContext ctx, int x, int y, int w, int h, int color) {
+        ctx.fill(x, y, x + w, y + 1, color);         // Top
+        ctx.fill(x, y + h - 1, x + w, y + h, color); // Bottom
+        ctx.fill(x, y, x + 1, y + h, color);         // Left
+        ctx.fill(x + w - 1, y, x + w, y + h, color); // Right
     }
 }

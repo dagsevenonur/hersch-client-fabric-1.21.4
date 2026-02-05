@@ -12,6 +12,7 @@ public abstract class Widget {
     protected String name;
     protected boolean enabled = true;
     protected int x, y;
+    protected int cachedWidth, cachedHeight; // Update this in render()
 
     protected final List<Setting<?>> settings = new ArrayList<>();
 
@@ -30,11 +31,11 @@ public abstract class Widget {
     public void setPos(int x, int y) { this.x = x; this.y = y; }
 
     public int getWidth(MinecraftClient mc) {
-        return mc.textRenderer.getWidth(this.name);
+        return cachedWidth > 0 ? cachedWidth : mc.textRenderer.getWidth(this.name);
     }
 
     public int getHeight(MinecraftClient mc) {
-        return 10;
+        return cachedHeight > 0 ? cachedHeight : 10;
     }
 
     /** Kartlarda gözükecek ikon. Override et. */

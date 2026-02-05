@@ -84,6 +84,10 @@ public final class CpsWidget extends Widget {
 
         int boxW = textW + pad * 2;
         int boxH = textH + pad * 2;
+        
+        // Update cached dimensions
+        this.cachedWidth = (int) (boxW * sc);
+        this.cachedHeight = (int) (boxH * sc);
 
         ctx.getMatrices().push();
         ctx.getMatrices().translate(x, y, 0);
@@ -109,8 +113,8 @@ public final class CpsWidget extends Widget {
 
     @Override
     public int getWidth(MinecraftClient mc) {
-        // tahmini genişlik (opsiyonel)
-        return mc.textRenderer.getWidth("99 | 99 CPS");
+        // Return cached width if available
+        return super.getWidth(mc);
     }
 
     @Override

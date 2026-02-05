@@ -46,6 +46,9 @@ public final class KeystrokesWidget extends Widget {
             ctx.fill(0, 0, w + pad*2, h + pad*2, (a << 24));
         }
 
+        this.cachedWidth = (int) ((w + pad * 2) * sc);
+        this.cachedHeight = (int) ((h + pad * 2) * sc);
+
         int ox = pad;
         int oy = pad;
 

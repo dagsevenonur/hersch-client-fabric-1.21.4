@@ -39,6 +39,9 @@ public final class FpsWidget extends Widget {
 
         int boxW = textW + pad * 2;
         int boxH = textH + pad * 2;
+        
+        this.cachedWidth = (int) (boxW * sc);
+        this.cachedHeight = (int) (boxH * sc);
 
         // matrix scale
         ctx.getMatrices().push();
@@ -65,7 +68,7 @@ public final class FpsWidget extends Widget {
 
     @Override
     public int getWidth(MinecraftClient mc) {
-        return mc.textRenderer.getWidth("FPS: 999");
+        return super.getWidth(mc);
     }
 
     @Override

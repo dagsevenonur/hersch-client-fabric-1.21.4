@@ -83,6 +83,9 @@ public final class PotionEffectsWidget extends Widget {
             ctx.fill(0, 0, boxW, boxH, (a << 24));
         }
 
+        this.cachedWidth = (int) (boxW * sc);
+        this.cachedHeight = (int) (boxH * sc);
+
         int ty = pad;
         for (String s : lines) {
             if (textShadow.get()) ctx.drawTextWithShadow(mc.textRenderer, s, pad, ty, 0xFFFFFF);
@@ -99,6 +102,16 @@ public final class PotionEffectsWidget extends Widget {
         int s = totalSeconds % 60;
         if (!showSeconds.get()) return m + "m";
         return String.format("%d:%02d", m, s);
+    }
+
+    @Override
+    public int getWidth(MinecraftClient mc) {
+        return super.getWidth(mc);
+    }
+
+    @Override
+    public int getHeight(MinecraftClient mc) {
+        return super.getHeight(mc);
     }
 
     @Override

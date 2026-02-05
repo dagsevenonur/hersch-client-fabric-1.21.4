@@ -49,6 +49,19 @@ public final class HeldItemDurabilityWidget extends Widget {
 
         String text = (showName.get() ? s.getName().getString() + ": " : "") + dur;
 
+        // Cache dimensions
+        MinecraftClient finalMc = mc;
+        int textW = finalMc.textRenderer.getWidth(text);
+        int textH = finalMc.textRenderer.fontHeight;
+        int pad = Math.round(padding.get());
+        float sc = scale.get();
+
+        int boxW = textW + pad * 2;
+        int boxH = textH + pad * 2;
+        
+        this.cachedWidth = (int) (boxW * sc);
+        this.cachedHeight = (int) (boxH * sc);
+
         HudDraw.drawBoxedText(
                 ctx, x, y,
                 scale.get(),
@@ -58,6 +71,16 @@ public final class HeldItemDurabilityWidget extends Widget {
                 textShadow.get(),
                 text
         );
+    }
+
+    @Override
+    public int getWidth(MinecraftClient mc) {
+        return super.getWidth(mc);
+    }
+
+    @Override
+    public int getHeight(MinecraftClient mc) {
+        return super.getHeight(mc);
     }
 
     @Override

@@ -30,6 +30,16 @@ public final class TargetHudWidget extends Widget {
     }
 
     @Override
+    public int getWidth(MinecraftClient mc) {
+        return super.getWidth(mc);
+    }
+
+    @Override
+    public int getHeight(MinecraftClient mc) {
+        return super.getHeight(mc);
+    }
+
+    @Override
     public void render(DrawContext ctx) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
@@ -63,6 +73,9 @@ public final class TargetHudWidget extends Widget {
 
         int boxW = maxW + pad * 2;
         int boxH = (lines * lineH) + pad * 2;
+        
+        this.cachedWidth = (int) (boxW * sc);
+        this.cachedHeight = (int) (boxH * sc);
 
         ctx.getMatrices().push();
         ctx.getMatrices().translate(x, y, 0);

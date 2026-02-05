@@ -18,7 +18,7 @@ public final class ArmorStatusWidget extends Widget {
     public final BoolSetting textShadow = new BoolSetting("text_shadow", "Text Shadow", true);
 
     public final BoolSetting showPercent = new BoolSetting("percent", "Show %", true);
-
+    
     public ArmorStatusWidget() {
         super("ARMOR", 6, 20);
         settings.add(scale);
@@ -46,6 +46,19 @@ public final class ArmorStatusWidget extends Widget {
                         "L:" + fmt(legs) + " " +
                         "B:" + fmt(boots);
 
+        // Calculate dimensions for caching
+        MinecraftClient finalMc = mc;
+        int textW = finalMc.textRenderer.getWidth(text);
+        int textH = finalMc.textRenderer.fontHeight;
+        int pad = Math.round(padding.get());
+        float sc = scale.get();
+
+        int boxW = textW + pad * 2;
+        int boxH = textH + pad * 2;
+        
+        this.cachedWidth = (int) (boxW * sc);
+        this.cachedHeight = (int) (boxH * sc);
+
         HudDraw.drawBoxedText(
                 ctx, x, y,
                 scale.get(),
@@ -55,6 +68,16 @@ public final class ArmorStatusWidget extends Widget {
                 textShadow.get(),
                 text
         );
+    }
+
+    @Override
+    public int getWidth(MinecraftClient mc) {
+        return super.getWidth(mc);
+    }
+
+    @Override
+    public int getHeight(MinecraftClient mc) {
+        return super.getHeight(mc);
     }
 
     private String fmt(ItemStack s) {

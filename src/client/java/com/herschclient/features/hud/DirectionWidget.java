@@ -59,6 +59,9 @@ public final class DirectionWidget extends Widget {
 
         int boxW = textW + pad * 2;
         int boxH = textH + pad * 2;
+        
+        this.cachedWidth = (int) (boxW * sc);
+        this.cachedHeight = (int) (boxH * sc);
 
         ctx.getMatrices().push();
         ctx.getMatrices().translate(x, y, 0);
@@ -120,7 +123,7 @@ public final class DirectionWidget extends Widget {
 
     @Override
     public int getWidth(MinecraftClient mc) {
-        return mc.textRenderer.getWidth("South-West (360°)");
+        return super.getWidth(mc);
     }
 
     @Override

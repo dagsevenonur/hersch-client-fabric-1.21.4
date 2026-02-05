@@ -64,6 +64,9 @@ public final class CoordinatesWidget extends Widget {
 
         int boxW = textW + pad * 2;
         int boxH = textH + pad * 2;
+        
+        this.cachedWidth = (int) (boxW * sc);
+        this.cachedHeight = (int) (boxH * sc);
 
         ctx.getMatrices().push();
         ctx.getMatrices().translate(x, y, 0);
@@ -86,8 +89,7 @@ public final class CoordinatesWidget extends Widget {
 
     @Override
     public int getWidth(MinecraftClient mc) {
-        // seçme kutusu için kaba ölçü
-        return mc.textRenderer.getWidth("OVERWORLD | X: -12345  Y: 123  Z: -12345");
+        return super.getWidth(mc);
     }
 
     @Override
