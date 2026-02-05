@@ -5,6 +5,10 @@ build/
 out/
 classes/
 
+# Node Modules
+
+node_modules/
+
 # eclipse
 
 *.launch
