@@ -21,82 +21,90 @@ public final class ModSettingsScreen extends Screen {
 
     private final Screen parent;
 
-    // Panel layout
+    // Layout Constants
+    private final int SIDEBAR_WIDTH = 100;
+    private final int TOP_BAR_HEIGHT = 30;
+    private final int PADDING = 10;
+    private final int GAP = 8;
+    
+    // Panel
     private int panelX, panelY, panelW, panelH;
-    private final int headerH = 26;
-    private final int tabsH = 22;
-    private final int pad = 10;
-
-    // Grid layout
-    private final int cardW = 140;
-    private final int cardH = 92;
-    private final int gap = 10;
+    
+    // Grid
+    private int cardW = 160;
+    private int cardH = 80;
     private int cols = 3;
 
     // Scroll
     private int scrollY = 0;
     private int contentHeight = 0;
 
-    private enum Tab { ALL, HUD, MODULES }
-    private Tab activeTab = Tab.ALL;
+    private enum Section {
+        ALL("All Mods"), 
+        HUD("HUD"), 
+        MODULES("Modules");
+        
+        final String label;
+        Section(String label) { this.label = label; }
+    }
+    
+    private Section activeSection = Section.ALL;
+    private final List<Card> cards = new ArrayList<>();
 
     private interface Card {
         void render(DrawContext ctx, int mouseX, int mouseY, int scrollY, net.minecraft.client.font.TextRenderer tr);
         boolean mouseClicked(int mx, int my, int scrollY, MinecraftClient mc);
+        String getName();
     }
 
-    private final List<Card> cards = new ArrayList<>();
-
     public ModSettingsScreen(Screen parent) {
-        super(Text.literal("Mod Ayarları"));
+        super(Text.literal("Hersch Settings"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
-        panelW = Math.min(520, this.width - 40);
-        panelH = Math.min(310, this.height - 40);
-        panelX = (this.width - panelW) / 2;
-        panelY = (this.height - panelH) / 2;
-
-        cols = Math.max(2, (panelW - pad * 2) / (cardW + gap));
-        cols = Math.min(cols, 4);
+        // Fullscreen-ish overlay with margins
+        int margin = 30;
+        panelW = this.width - margin * 2;
+        panelH = this.height - margin * 2;
+        panelX = margin;
+        panelY = margin;
 
         rebuildCards();
     }
 
     private void rebuildCards() {
         cards.clear();
-
         List<Object> items = new ArrayList<>();
 
-        if (activeTab == Tab.HUD) {
+        if (activeSection == Section.HUD) {
             items.addAll(HerschClient.HUD.getWidgets());
-        } else if (activeTab == Tab.MODULES) {
+        } else if (activeSection == Section.MODULES) {
             items.addAll(HerschClient.MODULES.all());
         } else {
-            // ALL: hem widget hem module
             items.addAll(HerschClient.HUD.getWidgets());
             items.addAll(HerschClient.MODULES.all());
         }
 
-        // Stabil görünüm: widgets alfabetik, modules alfabetik
         items.sort((a, b) -> {
             String an = (a instanceof Widget w) ? w.getName() : ((Module) a).getName();
             String bn = (b instanceof Widget w) ? w.getName() : ((Module) b).getName();
             return String.CASE_INSENSITIVE_ORDER.compare(an, bn);
         });
 
-        int contentX = panelX + pad;
-        int contentY = panelY + headerH + tabsH + pad;
-        int contentW = panelW - pad * 2;
-
+        // Calculate layout
+        int contentX = panelX + SIDEBAR_WIDTH + PADDING;
+        int contentW = panelW - SIDEBAR_WIDTH - PADDING * 2;
+        
+        cols = Math.max(1, contentW / (cardW + GAP));
+        
         int col = 0;
         int row = 0;
-
+        
         for (Object obj : items) {
-            int x = contentX + col * (cardW + gap);
-            int y = contentY + row * (cardH + gap);
+            int x = contentX + col * (cardW + GAP);
+            int y = (panelY + PADDING) + row * (cardH + GAP); // Relative to content start
 
             if (obj instanceof Widget w) {
                 cards.add(new WidgetCard(x, y, cardW, cardH, w));
@@ -105,104 +113,83 @@ public final class ModSettingsScreen extends Screen {
             }
 
             col++;
-            if (col >= cols || x + (cardW + gap) > contentX + contentW) {
+            if (col >= cols) {
                 col = 0;
                 row++;
             }
         }
-
-        int rows = (int) Math.ceil(cards.size() / (double) cols);
-        contentHeight = rows * (cardH + gap) - gap;
-        scrollY = clamp(scrollY, 0, Math.max(0, contentHeight - getViewportH()));
+        
+        int rows = (int) Math.ceil(items.size() / (double) cols);
+        contentHeight = rows * (cardH + GAP) + PADDING * 2;
+        scrollY = 0; // Reset scroll on tab change
     }
 
-    private int getViewportY() {
-        return panelY + headerH + tabsH + pad;
-    }
-
-    private int getViewportH() {
-        return panelH - headerH - tabsH - pad - pad;
-    }
-
-    @Override
-    public void close() {
-        this.client.setScreen(parent);
-    }
-
-    @Override
-    public boolean shouldPause() {
-        return false;
-    }
-
-    // Blur yok -> renderBackground çağırmıyoruz
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Panel
-        fill(ctx, panelX, panelY, panelX + panelW, panelY + panelH, 0xB0121212);
-        drawBorder(ctx, panelX, panelY, panelW, panelH, 0xFF2B2B2B);
+        // 1. Dim Background
+        this.renderBackground(ctx, mouseX, mouseY, delta);
+        
+        // 2. Main Panel BG
+        ctx.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xFF181818); // Dark Grey
+        
+        // 3. Sidebar BG
+        ctx.fill(panelX, panelY, panelX + SIDEBAR_WIDTH, panelY + panelH, 0xFF141414); // Darker Grey
+        
+        // 4. Sidebar Separator
+        ctx.fill(panelX + SIDEBAR_WIDTH, panelY, panelX + SIDEBAR_WIDTH + 1, panelY + panelH, 0xFF2A2A2A);
 
-        // Header
-        fill(ctx, panelX, panelY, panelX + panelW, panelY + headerH, 0xCC1A1A1A);
-        ctx.drawTextWithShadow(textRenderer, "HERSCH CLIENT", panelX + 10, panelY + 9, 0xFFECECEC);
-
-        // Close button
-        int closeSize = 16;
-        int closeX = panelX + panelW - closeSize - 8;
-        int closeY = panelY + 5;
-        boolean closeHover = inRect(mouseX, mouseY, closeX, closeY, closeSize, closeSize);
-        fill(ctx, closeX, closeY, closeX + closeSize, closeY + closeSize, closeHover ? 0xFF3A3A3A : 0xFF2A2A2A);
-        ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("x"), closeX + closeSize / 2, closeY + 4, 0xFFFFFFFF);
-
-        // Tabs bar
-        int tabsY = panelY + headerH;
-        fill(ctx, panelX, tabsY, panelX + panelW, tabsY + tabsH, 0xAA141414);
-
-        drawTab(ctx, "ALL", Tab.ALL, panelX + 10, tabsY + 4, 36, mouseX, mouseY);
-        drawTab(ctx, "HUD", Tab.HUD, panelX + 54, tabsY + 4, 36, mouseX, mouseY);
-        drawTab(ctx, "MODULES", Tab.MODULES, panelX + 98, tabsY + 4, 62, mouseX, mouseY);
-
-        // HUD Layout button (alt sol)
-        int hudBtnW = 130;
-        int hudBtnH = 16;
-        int hudBtnX = panelX + 10;
-        int hudBtnY = panelY + panelH - hudBtnH - 8;
-        boolean hudHover = inRect(mouseX, mouseY, hudBtnX, hudBtnY, hudBtnW, hudBtnH);
-        fill(ctx, hudBtnX, hudBtnY, hudBtnX + hudBtnW, hudBtnY + hudBtnH, hudHover ? 0xFF2E5CFF : 0xFF2747C9);
-        ctx.drawCenteredTextWithShadow(
-                textRenderer,
-                "EDIT HUD LAYOUT",
-                hudBtnX + hudBtnW / 2,
-                hudBtnY + (hudBtnH - textRenderer.fontHeight) / 2,
-                0xFFFFFF
-        );
-
-        // Scissor (scroll)
-        int vpX1 = panelX + pad;
-        int vpY1 = getViewportY();
-        int vpX2 = panelX + panelW - pad;
-        int vpY2 = vpY1 + getViewportH();
-
-        ctx.enableScissor(vpX1, vpY1, vpX2, vpY2);
-
-        for (Card c : cards) {
-            c.render(ctx, mouseX, mouseY, scrollY, this.textRenderer);
+        // 5. Sidebar Items
+        int itemY = panelY + 40;
+        for (Section sec : Section.values()) {
+            boolean active = (sec == activeSection);
+            boolean hover = mouseX >= panelX && mouseX < panelX + SIDEBAR_WIDTH && mouseY >= itemY && mouseY < itemY + 24;
+            
+            int color = active ? 0xFFFFFFFF : (hover ? 0xFFE0E0E0 : 0xFF888888);
+            
+            if (active) {
+                // Active Indicator (Blue Line)
+                ctx.fill(panelX, itemY + 4, panelX + 2, itemY + 20, 0xFF3B72FF);
+            }
+            
+            ctx.drawTextWithShadow(textRenderer, sec.label, panelX + 12, itemY + 8, color);
+            itemY += 28;
         }
 
+        // 6. Content Area Scissor
+        int viewportX = panelX + SIDEBAR_WIDTH;
+        int viewportY = panelY;
+        int viewportW = panelW - SIDEBAR_WIDTH;
+        int viewportH = panelH;
+        
+        ctx.enableScissor(viewportX, viewportY, viewportX + viewportW, viewportY + viewportH);
+        
+        // Render Cards with Scroll
+        for (Card c : cards) {
+            c.render(ctx, mouseX, mouseY, scrollY, textRenderer);
+        }
+        
         ctx.disableScissor();
-
-        super.render(ctx, mouseX, mouseY, delta);
-    }
-
-    private void drawTab(DrawContext ctx, String label, Tab tab, int x, int y, int w, int mouseX, int mouseY) {
-        int h = 14;
-        boolean hover = inRect(mouseX, mouseY, x, y, w, h);
-
-        int bg;
-        if (activeTab == tab) bg = 0xFF3B72FF;
-        else bg = hover ? 0xFF2C2C2C : 0xFF222222;
-
-        fill(ctx, x, y, x + w, y + h, bg);
-        ctx.drawTextWithShadow(textRenderer, label, x + 8, y + 3, 0xFFFFFFFF);
+        
+        // 7. Header / Logo (Top Left of Sidebar)
+        ctx.drawTextWithShadow(textRenderer, "HERSCH", panelX + 12, panelY + 12, 0xFF3B72FF);
+        
+        // 8. Close Button (Top Right)
+        int closeSize = 20;
+        int closeX = panelX + panelW - closeSize - 8;
+        int closeY = panelY + 8;
+        boolean closeHover = mouseX >= closeX && mouseX <= closeX + closeSize && mouseY >= closeY && mouseY <= closeY + closeSize;
+        ctx.fill(closeX, closeY, closeX + closeSize, closeY + closeSize, closeHover ? 0xFF991111 : 0xFF2A2A2A);
+        ctx.drawCenteredTextWithShadow(textRenderer, "X", closeX + closeSize / 2, closeY + 6, 0xFFFFFFFF);
+        
+        // 9. HUD Editor Button (Bottom Sidebar)
+        int editBtnH = 24;
+        int editBtnY = panelY + panelH - editBtnH - 12;
+        boolean editHover = mouseX >= panelX + 8 && mouseX <= panelX + SIDEBAR_WIDTH - 8 && mouseY >= editBtnY && mouseY <= editBtnY + editBtnH;
+        
+        ctx.fill(panelX + 8, editBtnY, panelX + SIDEBAR_WIDTH - 8, editBtnY + editBtnH, editHover ? 0xFF3B72FF : 0xFF2A2A2A);
+        ctx.drawCenteredTextWithShadow(textRenderer, "EDIT HUD", panelX + SIDEBAR_WIDTH / 2, editBtnY + 8, 0xFFFFFFFF);
+        
+        //super.render(ctx, mouseX, mouseY, delta);
     }
 
     @Override
@@ -211,290 +198,233 @@ public final class ModSettingsScreen extends Screen {
         int my = (int) mouseY;
 
         // Close
-        int closeSize = 16;
+        int closeSize = 20;
         int closeX = panelX + panelW - closeSize - 8;
-        int closeY = panelY + 5;
-        if (inRect(mx, my, closeX, closeY, closeSize, closeSize)) {
-            close();
+        int closeY = panelY + 8;
+        if (mx >= closeX && mx <= closeX + closeSize && my >= closeY && my <= closeY + closeSize) {
+            this.close();
             return true;
         }
-
-        // Tabs
-        int tabsY = panelY + headerH;
-
-        if (inRect(mx, my, panelX + 10, tabsY + 4, 36, 14)) {
-            activeTab = Tab.ALL;
-            rebuildCards();
-            return true;
+        
+        // Sidebar Navigation
+        if (mx >= panelX && mx < panelX + SIDEBAR_WIDTH && my >= panelY + 40) {
+            int itemY = panelY + 40;
+            for (Section sec : Section.values()) {
+                if (my >= itemY && my < itemY + 24) {
+                    activeSection = sec;
+                    rebuildCards();
+                    return true;
+                }
+                itemY += 28;
+            }
         }
-        if (inRect(mx, my, panelX + 54, tabsY + 4, 36, 14)) {
-            activeTab = Tab.HUD;
-            rebuildCards();
-            return true;
-        }
-        if (inRect(mx, my, panelX + 98, tabsY + 4, 62, 14)) {
-            activeTab = Tab.MODULES;
-            rebuildCards();
-            return true;
-        }
-
-        // HUD Layout
-        int hudBtnW = 130;
-        int hudBtnH = 16;
-        int hudBtnX = panelX + 10;
-        int hudBtnY = panelY + panelH - hudBtnH - 8;
-        if (inRect(mx, my, hudBtnX, hudBtnY, hudBtnW, hudBtnH)) {
-            this.client.setScreen(new HudEditScreen(this));
-            return true;
+        
+        // Edit HUD Button
+        int editBtnH = 24;
+        int editBtnY = panelY + panelH - editBtnH - 12;
+        if (mx >= panelX + 8 && mx <= panelX + SIDEBAR_WIDTH - 8 && my >= editBtnY && my <= editBtnY + editBtnH) {
+             this.client.setScreen(new HudEditScreen(this));
+             return true;
         }
 
         // Cards
-        for (Card c : cards) {
-            if (c.mouseClicked(mx, my, scrollY, this.client)) return true;
+        if (mx >= panelX + SIDEBAR_WIDTH) {
+            for (Card c : cards) {
+                if (c.mouseClicked(mx, my, scrollY, client)) return true;
+            }
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
     }
-
+    
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (!inRect((int) mouseX, (int) mouseY, panelX, panelY, panelW, panelH)) return false;
-
-        int maxScroll = Math.max(0, contentHeight - getViewportH());
-        scrollY = clamp(scrollY - (int) (verticalAmount * 18), 0, maxScroll);
-        return true;
+         if (mouseX >= panelX + SIDEBAR_WIDTH) {
+             int maxScroll = Math.max(0, contentHeight - (panelH));
+             scrollY = Math.max(0, Math.min(maxScroll, scrollY - (int)(verticalAmount * 20)));
+             return true;
+         }
+         return false;
     }
 
-    // ---------------- util ----------------
-
-    private static void fill(DrawContext ctx, int x1, int y1, int x2, int y2, int argb) {
-        ctx.fill(x1, y1, x2, y2, argb);
+    @Override
+    public void close() {
+        this.client.setScreen(parent);
     }
 
-    private static void drawBorder(DrawContext ctx, int x, int y, int w, int h, int argb) {
-        ctx.fill(x, y, x + w, y + 1, argb);
-        ctx.fill(x, y + h - 1, x + w, y + h, argb);
-        ctx.fill(x, y, x + 1, y + h, argb);
-        ctx.fill(x + w - 1, y, x + w, y + h, argb);
-    }
+    // ================== CARDS ==================
 
-    private static boolean inRect(double mx, double my, int x, int y, int w, int h) {
-        return mx >= x && mx < x + w && my >= y && my < y + h;
-    }
-
-    private static boolean inRect(int mx, int my, int x, int y, int w, int h) {
-        return mx >= x && mx < x + w && my >= y && my < y + h;
-    }
-
-    private static int clamp(int v, int min, int max) {
-        return Math.max(min, Math.min(max, v));
-    }
-
-    // ---------------- Widget Card ----------------
-
-    private static final class WidgetCard implements Card {
+    private static class WidgetCard implements Card {
         private final int x, y, w, h;
         private final Widget widget;
-        private final int barH = 18;
 
         WidgetCard(int x, int y, int w, int h, Widget widget) {
             this.x = x; this.y = y; this.w = w; this.h = h; this.widget = widget;
         }
 
         @Override
+        public String getName() { return widget.getName(); }
+
+        @Override
         public void render(DrawContext ctx, int mouseX, int mouseY, int scrollY, net.minecraft.client.font.TextRenderer tr) {
             int ry = y - scrollY;
             boolean hover = mouseX >= x && mouseX < x + w && mouseY >= ry && mouseY < ry + h;
 
-            // bg
-            ctx.fill(x, ry, x + w, ry + h, hover ? 0xCC202020 : 0xBB1C1C1C);
+            // Sharp BG
+            ctx.fill(x, ry, x + w, ry + h, hover ? 0xFF242424 : 0xFF1E1E1E);
+            // Sharp Outline
+            int outlineColor = hover ? 0xFF3B72FF : 0xFF2A2A2A;
+            drawSharpOutline(ctx, x, ry, w, h, outlineColor);
 
-            // border (ry ile)
-            ctx.fill(x, ry, x + w, ry + 1, 0xFF2B2B2B);
-            ctx.fill(x, ry + h - 1, x + w, ry + h, 0xFF2B2B2B);
-            ctx.fill(x, ry, x + 1, ry + h, 0xFF2B2B2B);
-            ctx.fill(x + w - 1, ry, x + w, ry + h, 0xFF2B2B2B);
+            // Icon Placeholder (Typography)
+            String shortName = widget.getName().substring(0, Math.min(2, widget.getName().length())).toUpperCase();
+            ctx.fill(x + 10, ry + 10, x + 40, ry + 40, 0xFF2A2A2A); // Icon Box
+            
+            // Draw Icon Text
+            ctx.getMatrices().push();
+            ctx.getMatrices().translate(x + 25, ry + 25, 0);
+            ctx.getMatrices().scale(1.5f, 1.5f, 1f);
+            ctx.drawCenteredTextWithShadow(tr, shortName, 0, -4, 0xFF555555);
+            ctx.getMatrices().pop();
 
-            // Title
-            ctx.drawCenteredTextWithShadow(tr, Text.literal(widget.getName()), x + w / 2, ry + 18, 0xFFEAEAEA);
-
-            // Icon
-            int iconSize = 48;
-            int iconX = x + (w - iconSize) / 2;
-            int iconY = ry + 34;
-
-            var icon = widget.getIcon();
-            if (icon != null) {
-                int texSize = widget.getIconTextureSize();
-                ctx.fill(iconX - 4, iconY - 4, iconX + iconSize + 4, iconY + iconSize + 4, 0xFF2A2A2A);
-
-                ctx.drawTexture(
-                        RenderLayer::getGuiTextured,
-                        icon,
-                        iconX,
-                        iconY,
-                        0f, 0f,
-                        iconSize, iconSize,
-                        texSize, texSize
-                );
-            } else {
-                ctx.fill(iconX - 4, iconY - 4, iconX + iconSize + 4, iconY + iconSize + 4, 0xFF2A2A2A);
+            // Name
+            int toggleX = x + w - 30 - 10;
+            int maxTextW = toggleX - (x + 50) - 5;
+            String name = widget.getName();
+            if (tr.getWidth(name) > maxTextW) {
+                name = tr.trimToWidth(name, maxTextW - 6) + "...";
             }
-
-            // Bottom bar
-            int barY = ry + h - barH;
-            ctx.fill(x, barY, x + w, barY + barH, 0xFF171717);
-
-            // Options (sol)
-            int optX = x + 6;
-            int optY = barY + 3;
-            int optW = 70;
-            int optH = 12;
-            boolean optHover = inRect(mouseX, mouseY, optX, optY, optW, optH);
-            ctx.fill(optX, optY, optX + optW, optY + optH, optHover ? 0xFF2A2A2A : 0xFF202020);
-            ctx.drawTextWithShadow(tr, "OPTIONS", optX + 10, optY + 2, 0xFFDADADA);
-
-            // Enabled (sağ)
-            int enW = 54;
-            int enH = 12;
-            int enX = x + w - enW - 6;
-            int enY = optY;
-
-            boolean enHover = inRect(mouseX, mouseY, enX, enY, enW, enH);
-
-            int bg = widget.isEnabled() ? 0xFF1F8F4E : 0xFF3A3A3A;
-            if (enHover) bg = widget.isEnabled() ? 0xFF22A85B : 0xFF4A4A4A;
-
-            ctx.fill(enX, enY, enX + enW, enY + enH, bg);
-            ctx.drawCenteredTextWithShadow(tr, Text.literal("ENABLED"), enX + enW / 2, enY + 2, 0xFFFFFFFF);
+            ctx.drawTextWithShadow(tr, name, x + 50, ry + 12, 0xFFFFFFFF);
+            
+            // Enabled Toggle (Switch style)
+            int switchW = 30;
+            int switchH = 14;
+            int switchX = x + w - switchW - 10;
+            int switchY = ry + 12;
+            
+            int switchBg = widget.isEnabled() ? 0xFF3B72FF : 0xFF353535;
+            ctx.fill(switchX, switchY, switchX + switchW, switchY + switchH, switchBg);
+            
+            // Switch Knob
+            int knobOffset = widget.isEnabled() ? switchW - 12 : 2;
+            ctx.fill(switchX + knobOffset, switchY + 2, switchX + knobOffset + 10, switchY + switchH - 2, 0xFFFFFFFF);
+            
+            // Options Button
+            int optH = 16;
+            int optY = ry + h - optH - 8;
+            boolean optHover = mouseX >= x + 8 && mouseX <= x + w - 8 && mouseY >= optY && mouseY <= optY + optH;
+            
+            ctx.fill(x + 8, optY, x + w - 8, optY + optH, optHover ? 0xFF353535 : 0xFF2A2A2A);
+            ctx.drawCenteredTextWithShadow(tr, "SETTINGS", x + w / 2, optY + 4, 0xFFAAAAAA);
         }
 
         @Override
         public boolean mouseClicked(int mx, int my, int scrollY, MinecraftClient mc) {
             int ry = y - scrollY;
-
-            int barY = ry + h - barH;
-            int optX = x + 6;
-            int optY = barY + 3;
-            int optW = 70;
-            int optH = 12;
-
-            if (inRect(mx, my, optX, optY, optW, optH)) {
-                mc.setScreen(new WidgetOptionsScreen(mc.currentScreen, widget));
-                return true;
-            }
-
-            int enW = 54;
-            int enH = 12;
-            int enX = x + w - enW - 6;
-            int enY = optY;
-
-            if (inRect(mx, my, enX, enY, enW, enH)) {
+            
+            // Toggle
+            int switchW = 30;
+            int switchH = 14;
+            int switchX = x + w - switchW - 10;
+            int switchY = ry + 12;
+            if (mx >= switchX && mx <= switchX + switchW && my >= switchY && my <= switchY + switchH) {
                 widget.setEnabled(!widget.isEnabled());
                 ConfigManager.save();
                 return true;
             }
-
+            
+            // Options
+            int optH = 16;
+            int optY = ry + h - optH - 8;
+            if (mx >= x + 8 && mx <= x + w - 8 && my >= optY && my <= optY + optH) {
+                mc.setScreen(new WidgetOptionsScreen(mc.currentScreen, widget));
+                return true;
+            }
+            
             return false;
         }
     }
 
-    // ---------------- Module Card ----------------
-
-    private static final class ModuleCard implements Card {
+    private static class ModuleCard implements Card {
         private final int x, y, w, h;
         private final Module module;
-        private final int barH = 18;
 
         ModuleCard(int x, int y, int w, int h, Module module) {
             this.x = x; this.y = y; this.w = w; this.h = h; this.module = module;
         }
 
         @Override
+        public String getName() { return module.getName(); }
+
+        @Override
         public void render(DrawContext ctx, int mouseX, int mouseY, int scrollY, net.minecraft.client.font.TextRenderer tr) {
             int ry = y - scrollY;
             boolean hover = mouseX >= x && mouseX < x + w && mouseY >= ry && mouseY < ry + h;
 
-            ctx.fill(x, ry, x + w, ry + h, hover ? 0xCC202020 : 0xBB1C1C1C);
+            // Sharp BG
+            ctx.fill(x, ry, x + w, ry + h, hover ? 0xFF242424 : 0xFF1E1E1E);
+            // Sharp Outline
+            int outlineColor = hover ? 0xFF3B72FF : 0xFF2A2A2A;
+            drawSharpOutline(ctx, x, ry, w, h, outlineColor);
 
-            // border (ry)
-            ctx.fill(x, ry, x + w, ry + 1, 0xFF2B2B2B);
-            ctx.fill(x, ry + h - 1, x + w, ry + h, 0xFF2B2B2B);
-            ctx.fill(x, ry, x + 1, ry + h, 0xFF2B2B2B);
-            ctx.fill(x + w - 1, ry, x + w, ry + h, 0xFF2B2B2B);
+            // Icon Placeholder (Typography)
+            String shortName = module.getName().substring(0, Math.min(2, module.getName().length())).toUpperCase();
+            ctx.fill(x + 10, ry + 10, x + 40, ry + 40, 0xFF2A2A2A); // Icon Box
+            
+            ctx.getMatrices().push();
+            ctx.getMatrices().translate(x + 25, ry + 25, 0);
+            ctx.getMatrices().scale(1.5f, 1.5f, 1f);
+            ctx.drawCenteredTextWithShadow(tr, shortName, 0, -4, 0xFF555555);
+            ctx.getMatrices().pop();
 
-            ctx.drawCenteredTextWithShadow(tr, Text.literal(module.getName()), x + w / 2, ry + 18, 0xFFEAEAEA);
-            ctx.drawCenteredTextWithShadow(tr, Text.literal(module.getCategory().name()), x + w / 2, ry + 32, 0xFFB0B0B0);
+            // Name
+            int toggleX = x + w - 30 - 10;
+            int maxTextW = toggleX - (x + 50) - 5;
+            String name = module.getName();
+            if (tr.getWidth(name) > maxTextW) {
+                name = tr.trimToWidth(name, maxTextW - 6) + "...";
+            }
+            ctx.drawTextWithShadow(tr, name, x + 50, ry + 12, 0xFFFFFFFF);
+            
+            // Category
+            ctx.drawTextWithShadow(tr, module.getCategory().name(), x + 50, ry + 24, 0xFF888888);
 
-            // Bottom bar
-            int barY = ry + h - barH;
-            ctx.fill(x, barY, x + w, barY + barH, 0xFF171717);
-
-            // Options placeholder (sol)
-            int optX = x + 6;
-            int optY = barY + 3;
-            int optW = 70;
-            int optH = 12;
-            boolean optHover = inRect(mouseX, mouseY, optX, optY, optW, optH);
-            ctx.fill(optX, optY, optX + optW, optY + optH, optHover ? 0xFF2A2A2A : 0xFF202020);
-            ctx.drawTextWithShadow(tr, "OPTIONS", optX + 10, optY + 2, 0xFFDADADA);
-
-            // Enabled (sağ)
-            int enW = 54;
-            int enH = 12;
-            int enX = x + w - enW - 6;
-            int enY = optY;
-
-            boolean enHover = inRect(mouseX, mouseY, enX, enY, enW, enH);
-
-            int bg = module.isEnabled() ? 0xFF1F8F4E : 0xFF3A3A3A;
-            if (enHover) bg = module.isEnabled() ? 0xFF22A85B : 0xFF4A4A4A;
-
-            ctx.fill(enX, enY, enX + enW, enY + enH, bg);
-            ctx.drawCenteredTextWithShadow(tr, Text.literal("ENABLED"), enX + enW / 2, enY + 2, 0xFFFFFFFF);
+            // Enabled Toggle
+            int switchW = 30;
+            int switchH = 14;
+            int switchX = x + w - switchW - 10;
+            int switchY = ry + 12;
+            
+            int switchBg = module.isEnabled() ? 0xFF3B72FF : 0xFF353535;
+            ctx.fill(switchX, switchY, switchX + switchW, switchY + switchH, switchBg);
+            
+            int knobOffset = module.isEnabled() ? switchW - 12 : 2;
+            ctx.fill(switchX + knobOffset, switchY + 2, switchX + knobOffset + 10, switchY + switchH - 2, 0xFFFFFFFF);
         }
 
         @Override
         public boolean mouseClicked(int mx, int my, int scrollY, MinecraftClient mc) {
             int ry = y - scrollY;
-
-            int barY = ry + h - barH;
-
-            // options (şimdilik bir şey yapmıyor)
-            int optX = x + 6;
-            int optY = barY + 3;
-            int optW = 70;
-            int optH = 12;
-            if (inRect(mx, my, optX, optY, optW, optH)) {
-                return true;
-            }
-
-            int enW = 54;
-            int enH = 12;
-            int enX = x + w - enW - 6;
-            int enY = optY;
-
-            if (inRect(mx, my, enX, enY, enW, enH)) {
+            int switchW = 30;
+            int switchH = 14;
+            int switchX = x + w - switchW - 10;
+            int switchY = ry + 12;
+            
+            if (mx >= switchX && mx <= switchX + switchW && my >= switchY && my <= switchY + switchH) {
                 module.toggle();
                 ConfigManager.save();
                 return true;
             }
-
             return false;
         }
     }
-
-    // ---------------- Options Screen (Widget settings) ----------------
-
-    private static final class WidgetOptionsScreen extends Screen {
-
+    
+    // ================== OPTIONS SCREEN ==================
+    
+   private static final class WidgetOptionsScreen extends Screen {
         private final Screen parent;
         private final Widget widget;
-
-        // panel
         private int panelX, panelY, panelW, panelH;
-
-        // drag state (float slider)
         private String draggingKey = null;
 
         protected WidgetOptionsScreen(Screen parent, Widget widget) {
@@ -505,8 +435,8 @@ public final class ModSettingsScreen extends Screen {
 
         @Override
         protected void init() {
-            panelW = Math.min(360, this.width - 40);
-            panelH = Math.min(240, this.height - 40);
+            panelW = 320;
+            panelH = 200;
             panelX = (this.width - panelW) / 2;
             panelY = (this.height - panelH) / 2;
         }
@@ -517,87 +447,60 @@ public final class ModSettingsScreen extends Screen {
         }
 
         @Override
-        public boolean shouldPause() {
-            return false;
-        }
-
-        @Override
         public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-            // panel
-            ctx.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xB0121212);
-            ctx.fill(panelX, panelY, panelX + panelW, panelY + 24, 0xCC1A1A1A);
-            drawBorder(ctx, panelX, panelY, panelW, panelH, 0xFF2B2B2B);
+            this.renderBackground(ctx, mouseX, mouseY, delta);
+            
+            // Sharp Settings Panel
+            ctx.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xFF181818);
+            drawSharpOutline(ctx, panelX, panelY, panelW, panelH, 0xFF2A2A2A);
+            
+            // Header
+            ctx.fill(panelX, panelY, panelX + panelW, panelY + 28, 0xFF202020);
+            ctx.drawTextWithShadow(textRenderer, widget.getName().toUpperCase() + " SETTINGS", panelX + 12, panelY + 10, 0xFFFFFFFF);
 
-            // title
-            ctx.drawTextWithShadow(textRenderer, widget.getName() + " - OPTIONS", panelX + 10, panelY + 8, 0xFFECECEC);
+            // Close
+            int closeX = panelX + panelW - 20;
+            int closeY = panelY + 8;
+            boolean hoverClose = mouseX >= closeX && mouseX <= closeX + 12 && mouseY >= closeY && mouseY <= closeY + 12;
+            ctx.fill(closeX, closeY, closeX + 12, closeY + 12, hoverClose ? 0xFF991111 : 0xFF353535);
+            ctx.drawCenteredTextWithShadow(textRenderer, "x", closeX + 6, closeY + 2, 0xFFFFFFFF);
 
-            // close
-            int closeSize = 16;
-            int closeX = panelX + panelW - closeSize - 8;
-            int closeY = panelY + 4;
-            boolean closeHover = inRect(mouseX, mouseY, closeX, closeY, closeSize, closeSize);
-            ctx.fill(closeX, closeY, closeX + closeSize, closeY + closeSize, closeHover ? 0xFF3A3A3A : 0xFF2A2A2A);
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("x"), closeX + closeSize / 2, closeY + 4, 0xFFFFFFFF);
-
+            int y = panelY + 40;
             int x = panelX + 12;
-            int y = panelY + 34;
+            int w = panelW - 24;
 
-            // settings
             for (Setting<?> s : widget.getSettings()) {
-                if (y > panelY + panelH - 30) break;
-
                 if (s instanceof BoolSetting bs) {
-                    // row
-                    ctx.drawTextWithShadow(textRenderer, bs.getDisplayName(), x, y + 2, 0xFFDADADA);
-
-                    int bw = 80;
-                    int bh = 14;
-                    int bx = panelX + panelW - bw - 12;
-                    int by = y;
-
-                    boolean hover = inRect(mouseX, mouseY, bx, by, bw, bh);
-                    int bg = bs.get() ? 0xFF1F8F4E : 0xFF3A3A3A;
-                    if (hover) bg = bs.get() ? 0xFF22A85B : 0xFF4A4A4A;
-
-                    ctx.fill(bx, by, bx + bw, by + bh, bg);
-                    ctx.drawCenteredTextWithShadow(textRenderer, Text.literal(bs.get() ? "ON" : "OFF"), bx + bw / 2, by + 3, 0xFFFFFFFF);
-
-                    y += 20;
-                }
-                else if (s instanceof FloatSetting fs) {
-                    // label
-                    ctx.drawTextWithShadow(textRenderer, fs.getDisplayName(), x, y + 2, 0xFFDADADA);
-
-                    // slider bar
-                    int sw = 160;
-                    int sh = 10;
-                    int sx = panelX + panelW - sw - 12;
-                    int sy = y + 2;
-
-                    // background bar
-                    boolean hover = inRect(mouseX, mouseY, sx, sy, sw, sh);
-                    ctx.fill(sx, sy, sx + sw, sy + sh, hover ? 0xFF2A2A2A : 0xFF202020);
-
+                    ctx.drawTextWithShadow(textRenderer, bs.getDisplayName(), x, y + 4, 0xFFCCCCCC);
+                    
+                    int sw = 30;
+                    int sx = x + w - sw;
+                    int bg = bs.get() ? 0xFF3B72FF : 0xFF353535;
+                    ctx.fill(sx, y, sx + sw, y + 16, bg);
+                    
+                    int k = bs.get() ? sw - 12 : 2;
+                    ctx.fill(sx + k, y + 2, sx + k + 10, y + 14, 0xFFFFFFFF);
+                    
+                    y += 24;
+                } else if (s instanceof FloatSetting fs) {
+                    ctx.drawTextWithShadow(textRenderer, fs.getDisplayName(), x, y, 0xFFCCCCCC);
+                    String val = String.format("%.1f", fs.get());
+                    ctx.drawTextWithShadow(textRenderer, val, x + w - textRenderer.getWidth(val), y, 0xFF999999);
+                    
+                    y += 12;
+                    // Slider BG
+                    ctx.fill(x, y, x + w, y + 6, 0xFF2A2A2A);
+                    
+                    // Slider Fill
                     float t = (fs.get() - fs.min()) / (fs.max() - fs.min());
-                    if (t < 0) t = 0;
-                    if (t > 1) t = 1;
-
-                    int fillW = (int) (sw * t);
-                    ctx.fill(sx, sy, sx + fillW, sy + sh, 0xFF3B72FF);
-
-                    // knob
-                    int kx = sx + fillW - 2;
-                    ctx.fill(kx, sy - 2, kx + 4, sy + sh + 2, 0xFFECECEC);
-
-                    // value text
-                    String val = String.format("%.2f", fs.get());
-                    ctx.drawTextWithShadow(textRenderer, val, sx + sw + 6, y + 1, 0xFFBEBEBE);
-
-                    y += 20;
+                    int fw = (int) (w * t);
+                    ctx.fill(x, y, x + fw, y + 6, 0xFF3B72FF);
+                    
+                    y += 16;
                 }
             }
-
-            super.render(ctx, mouseX, mouseY, delta);
+            
+            //super.render(ctx, mouseX, mouseY, delta);
         }
 
         @Override
@@ -605,99 +508,76 @@ public final class ModSettingsScreen extends Screen {
             int mx = (int) mouseX;
             int my = (int) mouseY;
 
-            // close
-            int closeSize = 16;
-            int closeX = panelX + panelW - closeSize - 8;
-            int closeY = panelY + 4;
-            if (inRect(mx, my, closeX, closeY, closeSize, closeSize)) {
+             // Close
+            int closeX = panelX + panelW - 20;
+            int closeY = panelY + 8;
+            if (mx >= closeX && mx <= closeX + 12 && my >= closeY && my <= closeY + 12) {
                 close();
                 return true;
             }
 
+            int y = panelY + 40;
             int x = panelX + 12;
-            int y = panelY + 34;
-
+            int w = panelW - 24;
+            
             for (Setting<?> s : widget.getSettings()) {
-                if (y > panelY + panelH - 30) break;
-
                 if (s instanceof BoolSetting bs) {
-                    int bw = 80;
-                    int bh = 14;
-                    int bx = panelX + panelW - bw - 12;
-                    int by = y;
-
-                    if (inRect(mx, my, bx, by, bw, bh)) {
+                     int sw = 30;
+                    int sx = x + w - sw;
+                    if (mx >= sx && mx <= sx + sw && my >= y && my <= y + 16) {
                         bs.toggle();
-                        ConfigManager.save();
+                         ConfigManager.save();
                         return true;
                     }
-                    y += 20;
-                }
-                else if (s instanceof FloatSetting fs) {
-                    int sw = 160;
-                    int sh = 10;
-                    int sx = panelX + panelW - sw - 12;
-                    int sy = y + 2;
-
-                    if (inRect(mx, my, sx, sy - 4, sw, sh + 8)) {
+                    y += 24;
+                } else if (s instanceof FloatSetting fs) {
+                    y += 12;
+                    if (mx >= x && mx <= x + w && my >= y && my <= y + 6) {
                         draggingKey = fs.getKey();
-                        setFloatFromMouse(fs, mx, sx, sw);
-                        ConfigManager.save();
+                        updateSlider(fs, mx, x, w);
                         return true;
                     }
-                    y += 20;
+                    y += 16;
                 }
             }
-
             return super.mouseClicked(mouseX, mouseY, button);
         }
-
+        
         @Override
         public boolean mouseReleased(double mouseX, double mouseY, int button) {
             draggingKey = null;
             return super.mouseReleased(mouseX, mouseY, button);
         }
-
+        
         @Override
-        public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-            if (draggingKey == null) return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
-
-            int mx = (int) mouseX;
-
-            // hangi setting drag ediliyor bul
-            FloatSetting target = null;
-            for (Setting<?> s : widget.getSettings()) {
-                if (s instanceof FloatSetting fs && fs.getKey().equals(draggingKey)) {
-                    target = fs;
-                    break;
+        public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+            if (draggingKey != null) {
+                for (Setting<?> s : widget.getSettings()) {
+                    if (s instanceof FloatSetting fs && fs.getKey().equals(draggingKey)) {
+                         updateSlider(fs, (int)mouseX, panelX + 12, panelW - 24);
+                         return true;
+                    }
                 }
             }
-            if (target == null) return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
-
-            int sw = 160;
-            int sx = panelX + panelW - sw - 12;
-
-            setFloatFromMouse(target, mx, sx, sw);
-            ConfigManager.save();
-            return true;
+            return super.mouseDragged(mouseX, mouseY, button, dx, dy);
         }
-
-        private void setFloatFromMouse(FloatSetting fs, int mx, int sx, int sw) {
-            float t = (mx - sx) / (float) sw;
+        
+        private void updateSlider(FloatSetting fs, int mx, int x, int w) {
+            float t = (float)(mx - x) / w;
             if (t < 0) t = 0;
             if (t > 1) t = 1;
             float v = fs.min() + (fs.max() - fs.min()) * t;
             fs.setClamped(v);
+            ConfigManager.save();
         }
+   }
 
-        @Override
-        public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-            // tamamen transparan
-        }
-    }
+    // ================== UTILS ==================
 
-    @Override
-    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Tamamen transparan: hiçbir şey çizme
+    private static void drawSharpOutline(DrawContext ctx, int x, int y, int w, int h, int color) {
+        ctx.fill(x, y, x + w, y + 1, color);         // Top
+        ctx.fill(x, y + h - 1, x + w, y + h, color); // Bottom
+        ctx.fill(x, y, x + 1, y + h, color);         // Left
+        ctx.fill(x + w - 1, y, x + w, y + h, color); // Right
     }
 }

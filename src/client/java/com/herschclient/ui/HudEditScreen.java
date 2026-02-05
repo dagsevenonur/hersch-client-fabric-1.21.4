@@ -34,16 +34,26 @@ public final class HudEditScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         renderBackground(ctx, mouseX, mouseY, delta);
 
-        // HUD'ı normal şekilde çiz
+        // 1) Grid & Guides
+        drawGrid(ctx);
+        drawGuides(ctx);
+
+        // 2) HUD Render (actual widgets)
         HerschClient.HUD.render(ctx);
 
+        // 3) Instructions
         ctx.drawCenteredTextWithShadow(
                 textRenderer,
-                Text.literal("Sürükle-bırak ile HUD konumlarını ayarla. ESC ile geri dön."),
-                width / 2, 10, 0xFFFFFF
+                Text.literal("§lHUD EDIT MODE"),
+                width / 2, 10, 0xFFFFFFFF
+        );
+        ctx.drawCenteredTextWithShadow(
+                textRenderer,
+                Text.literal("§7Drag widgets to move. Press ESC to save."),
+                width / 2, 22, 0xFFAAAAAA
         );
 
-        // Aktif widget'lara outline çiz
+        // 4) Outlines & Interaction
         MinecraftClient mc = MinecraftClient.getInstance();
 
         for (Widget w : HerschClient.HUD.getWidgets()) {
@@ -54,14 +64,65 @@ public final class HudEditScreen extends Screen {
             int ww = Math.max(10, w.getWidth(mc));
             int hh = Math.max(10, w.getHeight(mc));
 
-            // basit çerçeve
-            ctx.fill(x - 2, y - 2, x + ww + 2, y - 1, 0x80FFFFFF);
-            ctx.fill(x - 2, y + hh + 1, x + ww + 2, y + hh + 2, 0x80FFFFFF);
-            ctx.fill(x - 2, y - 2, x - 1, y + hh + 2, 0x80FFFFFF);
-            ctx.fill(x + ww + 1, y - 2, x + ww + 2, y + hh + 2, 0x80FFFFFF);
+            boolean hover = (mouseX >= x && mouseX <= x + ww && mouseY >= y && mouseY <= y + hh);
+            boolean isDragging = (dragging == w);
+
+            // Colors
+            int borderColor = 0x40FFFFFF; // Faint white
+            int bgColor = 0x00000000;
+
+            if (hover || isDragging) {
+                borderColor = 0xFF3B72FF; // Hersch Blue
+                bgColor = 0x203B72FF;     // Semi-transparent blue fill
+            }
+
+            // Draw box
+            ctx.fill(x, y, x + ww, y + hh, bgColor);
+            
+            // Border (using simple logic for now, could use UiDraw)
+            ctx.fill(x - 1, y - 1, x + ww + 1, y, borderColor);          // Top
+            ctx.fill(x - 1, y + hh, x + ww + 1, y + hh + 1, borderColor);// Bottom
+            ctx.fill(x - 1, y, x, y + hh, borderColor);                  // Left
+            ctx.fill(x + ww, y, x + ww + 1, y + hh, borderColor);        // Right
+
+            // Coordinates on drag
+            if (isDragging || hover) {
+                String coords = String.format("(%d, %d)", x, y);
+                int cw = textRenderer.getWidth(coords);
+                
+                // Draw above or below depending on room
+                int ty = y - 12;
+                if (ty < 0) ty = y + hh + 4;
+                
+                int tx = x + (ww - cw) / 2;
+                ctx.drawTextWithShadow(textRenderer, coords, tx, ty, 0xFFE0E0E0);
+            }
         }
 
         super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    private void drawGrid(DrawContext ctx) {
+        int gridSize = 20;
+        int color = 0x15FFFFFF; // Very faint white
+
+        for (int x = 0; x < width; x += gridSize) {
+            ctx.fill(x, 0, x + 1, height, color);
+        }
+        for (int y = 0; y < height; y += gridSize) {
+            ctx.fill(0, y, width, y + 1, color);
+        }
+    }
+
+    private void drawGuides(DrawContext ctx) {
+        int cx = width / 2;
+        int cy = height / 2;
+        int color = 0x40FF0000; // Semi-transparent red
+
+        // Vertical guide
+        ctx.fill(cx - 1, 0, cx + 1, height, color);
+        // Horizontal guide
+        ctx.fill(0, cy - 1, width, cy + 1, color);
     }
 
     @Override
