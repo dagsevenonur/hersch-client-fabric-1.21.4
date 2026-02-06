@@ -33,7 +33,11 @@ public final class HudDraw {
 
         if (background) {
             int a = Math.round(bgOpacity * 255.0f);
-            ctx.fill(0, 0, boxW, boxH, (a << 24)); // siyah alpha
+            int bgColor = (a << 24); 
+            // Removed border as requested
+            int borderColor = 0; 
+            
+            drawSharpBox(ctx, 0, 0, boxW, boxH, bgColor, borderColor);
         }
 
         int tx = padding;
@@ -43,5 +47,18 @@ public final class HudDraw {
         else ctx.drawText(mc.textRenderer, text, tx, ty, 0xFFFFFF, false);
 
         ctx.getMatrices().pop();
+    }
+    
+    public static void drawSharpBox(DrawContext ctx, int x, int y, int w, int h, int color, int borderColor) {
+        // Outline
+        if (borderColor != 0) {
+            ctx.fill(x, y, x + w, y + 1, borderColor);         // Top
+            ctx.fill(x, y + h - 1, x + w, y + h, borderColor); // Bottom
+            ctx.fill(x, y, x + 1, y + h, borderColor);         // Left
+            ctx.fill(x + w - 1, y, x + w, y + h, borderColor); // Right
+        }
+        
+        // Fill
+        ctx.fill(x + 1, y + 1, x + w - 1, y + h - 1, color);
     }
 }

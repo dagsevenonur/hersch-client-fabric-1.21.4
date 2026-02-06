@@ -1,5 +1,6 @@
 package com.herschclient.features.hud;
 
+import com.herschclient.core.hud.HudDraw;
 import com.herschclient.core.hud.Widget;
 import com.herschclient.core.settings.BoolSetting;
 import com.herschclient.core.settings.FloatSetting;
@@ -33,7 +34,7 @@ public final class KeystrokesWidget extends Widget {
         int pad = Math.round(padding.get());
 
         int key = 18;     // tek tuş kutusu
-        int gap = 3;
+        int gap = 1;
         int w = (key * 3) + (gap * 2);
         int h = (key * 2) + gap + key; // 2 satır + space
 
@@ -69,21 +70,30 @@ public final class KeystrokesWidget extends Widget {
 
     private void drawKey(DrawContext ctx, int x, int y, int w, int h, String label, boolean pressed, boolean shadow) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        int bg = pressed ? 0xFF2E5CFF : 0xFF202020;
-        int br = 0xFF2B2B2B;
+        
+        // 70% opacity black (approx 180/255 -> B4 hex)
+        // 0xB4000000 = Black with ~70% opacity
+        int bg = pressed ? 0x00000000 : 0xB4000000; 
+        int br = 0; // No border
 
-        ctx.fill(x, y, x + w, y + h, bg);
-        // border
-        ctx.fill(x, y, x + w, y + 1, br);
-        ctx.fill(x, y + h - 1, x + w, y + h, br);
-        ctx.fill(x, y, x + 1, y + h, br);
-        ctx.fill(x + w - 1, y, x + w, y + h, br);
+        HudDraw.drawSharpBox(ctx, x, y, w, h, bg, br);
 
-        int tx = x + (w - mc.textRenderer.getWidth(label)) / 2;
-        int ty = y + (h - mc.textRenderer.fontHeight) / 2;
-
-        if (shadow) ctx.drawTextWithShadow(mc.textRenderer, label, tx, ty, 0xFFFFFF);
-        else ctx.drawText(mc.textRenderer, label, tx, ty, 0xFFFFFF, false);
+        if (label.equals("SPACE")) {
+             // Draw line for space
+             int barW = 20; // Width of the bar
+             int barH = 2;  // Height (thickness)
+             // Center it
+             int bx = x + (w - barW) / 2;
+             int by = y + (h - barH) / 2 - 3;
+             
+             ctx.fill(bx, by, bx + barW, by + barH, 0xFFFFFFFF);
+        } else {
+             int tx = x + (w - mc.textRenderer.getWidth(label)) / 2;
+             int ty = y + (h - mc.textRenderer.fontHeight) / 2;
+     
+             if (shadow) ctx.drawTextWithShadow(mc.textRenderer, label, tx, ty, 0xFFFFFF);
+             else ctx.drawText(mc.textRenderer, label, tx, ty, 0xFFFFFF, false);
+        }
     }
 
     @Override

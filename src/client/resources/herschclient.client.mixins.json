@@ -3,6 +3,7 @@
   "package": "com.herschclient.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "GameMenuScreenMixin"
+    "GameMenuScreenMixin",
+    "LightmapTextureManagerMixin"
   ]
 }

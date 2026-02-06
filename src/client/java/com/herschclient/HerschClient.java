@@ -22,11 +22,11 @@ public final class HerschClient implements ClientModInitializer {
     public static final HudManager HUD = new HudManager();
 
     public static final AutoSprintModule AUTO_SPRINT = new AutoSprintModule();
-
+    public static final com.herschclient.features.module.FullbrightModule FULLBRIGHT = new com.herschclient.features.module.FullbrightModule();
 
     @Override
     public void onInitializeClient() {
-        // 1) HUD widget kaydı
+        // ... widgets ...
         HUD.register(new FpsWidget());
         HUD.register(new CpsWidget());
         HUD.register(new CoordinatesWidget());
@@ -41,6 +41,8 @@ public final class HerschClient implements ClientModInitializer {
         HUD.register(new TargetHudWidget());
 
         MODULES.register(AUTO_SPRINT);
+        MODULES.register(FULLBRIGHT);
+
 
         // 2) Config yükle (widgetlar register edildikten sonra!)
         ConfigManager.load();
@@ -55,6 +57,7 @@ public final class HerschClient implements ClientModInitializer {
             EVENT_BUS.postTick(client);
 
             AUTO_SPRINT.onTick(client);
+            FULLBRIGHT.onTick(client);
         });
 
         // 3) Render2D event (HUD çizimi)

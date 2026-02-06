@@ -1,5 +1,6 @@
 package com.herschclient.features.hud;
 
+import com.herschclient.core.hud.HudDraw;
 import com.herschclient.core.hud.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -43,27 +44,15 @@ public final class FpsWidget extends Widget {
         this.cachedWidth = (int) (boxW * sc);
         this.cachedHeight = (int) (boxH * sc);
 
-        // matrix scale
-        ctx.getMatrices().push();
-        ctx.getMatrices().translate(x, y, 0);
-        ctx.getMatrices().scale(sc, sc, 1.0f);
-
-        if (background.get()) {
-            int a = Math.round(bgOpacity.get() * 255.0f);
-            int bg = (a << 24); // siyah, alpha’lı
-            ctx.fill(0, 0, boxW, boxH, bg);
-        }
-
-        int textX = pad;
-        int textY = pad;
-
-        if (textShadow.get()) {
-            ctx.drawTextWithShadow(mc.textRenderer, text, textX, textY, 0xFFFFFF);
-        } else {
-            ctx.drawText(mc.textRenderer, text, textX, textY, 0xFFFFFF, false);
-        }
-
-        ctx.getMatrices().pop();
+        HudDraw.drawBoxedText(
+                ctx, x, y,
+                scale.get(),
+                background.get(),
+                bgOpacity.get(),
+                Math.round(padding.get()),
+                textShadow.get(),
+                text
+        );
     }
 
     @Override

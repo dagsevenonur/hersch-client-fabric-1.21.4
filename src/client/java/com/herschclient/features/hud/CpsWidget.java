@@ -1,5 +1,6 @@
 package com.herschclient.features.hud;
 
+import com.herschclient.core.hud.HudDraw;
 import com.herschclient.core.hud.Widget;
 import com.herschclient.core.settings.BoolSetting;
 import com.herschclient.core.settings.FloatSetting;
@@ -89,26 +90,15 @@ public final class CpsWidget extends Widget {
         this.cachedWidth = (int) (boxW * sc);
         this.cachedHeight = (int) (boxH * sc);
 
-        ctx.getMatrices().push();
-        ctx.getMatrices().translate(x, y, 0);
-        ctx.getMatrices().scale(sc, sc, 1.0f);
-
-        if (background.get()) {
-            int a = Math.round(bgOpacity.get() * 255.0f);
-            int bg = (a << 24); // black with alpha
-            ctx.fill(0, 0, boxW, boxH, bg);
-        }
-
-        int tx = pad;
-        int ty = pad;
-
-        if (textShadow.get()) {
-            ctx.drawTextWithShadow(mc.textRenderer, text, tx, ty, 0xFFFFFF);
-        } else {
-            ctx.drawText(mc.textRenderer, text, tx, ty, 0xFFFFFF, false);
-        }
-
-        ctx.getMatrices().pop();
+        HudDraw.drawBoxedText(
+                ctx, x, y,
+                scale.get(),
+                background.get(),
+                bgOpacity.get(),
+                Math.round(padding.get()),
+                textShadow.get(),
+                text
+        );
     }
 
     @Override

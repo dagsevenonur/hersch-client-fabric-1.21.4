@@ -1,5 +1,6 @@
 package com.herschclient.features.hud;
 
+import com.herschclient.core.hud.HudDraw;
 import com.herschclient.core.hud.Widget;
 import com.herschclient.core.settings.BoolSetting;
 import com.herschclient.core.settings.FloatSetting;
@@ -88,7 +89,9 @@ public final class TargetHudWidget extends Widget {
 
         if (background.get()) {
             int a = Math.round(bgOpacity.get() * 255.0f);
-            ctx.fill(0, 0, boxW, boxH, (a << 24));
+            int bgColor = (a << 24);
+            int borderColor = 0x40FFFFFF;
+            HudDraw.drawSharpBox(ctx, 0, 0, boxW, boxH, bgColor, borderColor);
         }
 
         int ty = pad;
