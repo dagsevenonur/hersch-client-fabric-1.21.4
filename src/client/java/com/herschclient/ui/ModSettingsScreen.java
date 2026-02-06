@@ -6,6 +6,7 @@ import com.herschclient.core.hud.Widget;
 import com.herschclient.core.module.Module;
 import com.herschclient.core.settings.BoolSetting;
 import com.herschclient.core.settings.FloatSetting;
+import com.herschclient.core.settings.ModeSetting;
 import com.herschclient.core.settings.Setting;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -280,7 +281,6 @@ public final class ModSettingsScreen extends Screen {
             String shortName = widget.getName().substring(0, Math.min(2, widget.getName().length())).toUpperCase();
             ctx.fill(x + 10, ry + 10, x + 40, ry + 40, 0xFF2A2A2A); // Icon Box
             
-            // Draw Icon Text
             ctx.getMatrices().push();
             ctx.getMatrices().translate(x + 25, ry + 25, 0);
             ctx.getMatrices().scale(1.5f, 1.5f, 1f);
@@ -305,17 +305,18 @@ public final class ModSettingsScreen extends Screen {
             int switchBg = widget.isEnabled() ? 0xFF3B72FF : 0xFF353535;
             ctx.fill(switchX, switchY, switchX + switchW, switchY + switchH, switchBg);
             
-            // Switch Knob
             int knobOffset = widget.isEnabled() ? switchW - 12 : 2;
             ctx.fill(switchX + knobOffset, switchY + 2, switchX + knobOffset + 10, switchY + switchH - 2, 0xFFFFFFFF);
             
             // Options Button
-            int optH = 16;
-            int optY = ry + h - optH - 8;
-            boolean optHover = mouseX >= x + 8 && mouseX <= x + w - 8 && mouseY >= optY && mouseY <= optY + optH;
-            
-            ctx.fill(x + 8, optY, x + w - 8, optY + optH, optHover ? 0xFF353535 : 0xFF2A2A2A);
-            ctx.drawCenteredTextWithShadow(tr, "SETTINGS", x + w / 2, optY + 4, 0xFFAAAAAA);
+            if (!widget.getSettings().isEmpty()) {
+                int optH = 16;
+                int optY = ry + h - optH - 8;
+                boolean optHover = mouseX >= x + 8 && mouseX <= x + w - 8 && mouseY >= optY && mouseY <= optY + optH;
+                
+                ctx.fill(x + 8, optY, x + w - 8, optY + optH, optHover ? 0xFF353535 : 0xFF2A2A2A);
+                ctx.drawCenteredTextWithShadow(tr, "SETTINGS", x + w / 2, optY + 4, 0xFFAAAAAA);
+            }
         }
 
         @Override
@@ -334,11 +335,13 @@ public final class ModSettingsScreen extends Screen {
             }
             
             // Options
-            int optH = 16;
-            int optY = ry + h - optH - 8;
-            if (mx >= x + 8 && mx <= x + w - 8 && my >= optY && my <= optY + optH) {
-                mc.setScreen(new WidgetOptionsScreen(mc.currentScreen, widget));
-                return true;
+            if (!widget.getSettings().isEmpty()) {
+                int optH = 16;
+                int optY = ry + h - optH - 8;
+                if (mx >= x + 8 && mx <= x + w - 8 && my >= optY && my <= optY + optH) {
+                    mc.setScreen(new SettingsDetailScreen(mc.currentScreen, widget.getName(), widget.getSettings()));
+                    return true;
+                }
             }
             
             return false;
@@ -367,9 +370,9 @@ public final class ModSettingsScreen extends Screen {
             int outlineColor = hover ? 0xFF3B72FF : 0xFF2A2A2A;
             drawSharpOutline(ctx, x, ry, w, h, outlineColor);
 
-            // Icon Placeholder (Typography)
+            // Icon Placeholder
             String shortName = module.getName().substring(0, Math.min(2, module.getName().length())).toUpperCase();
-            ctx.fill(x + 10, ry + 10, x + 40, ry + 40, 0xFF2A2A2A); // Icon Box
+            ctx.fill(x + 10, ry + 10, x + 40, ry + 40, 0xFF2A2A2A);
             
             ctx.getMatrices().push();
             ctx.getMatrices().translate(x + 25, ry + 25, 0);
@@ -400,6 +403,16 @@ public final class ModSettingsScreen extends Screen {
             
             int knobOffset = module.isEnabled() ? switchW - 12 : 2;
             ctx.fill(switchX + knobOffset, switchY + 2, switchX + knobOffset + 10, switchY + switchH - 2, 0xFFFFFFFF);
+
+            // Options Button (NEW)
+            if (!module.getSettings().isEmpty()) {
+                int optH = 16;
+                int optY = ry + h - optH - 8;
+                boolean optHover = mouseX >= x + 8 && mouseX <= x + w - 8 && mouseY >= optY && mouseY <= optY + optH;
+                
+                ctx.fill(x + 8, optY, x + w - 8, optY + optH, optHover ? 0xFF353535 : 0xFF2A2A2A);
+                ctx.drawCenteredTextWithShadow(tr, "SETTINGS", x + w / 2, optY + 4, 0xFFAAAAAA);
+            }
         }
 
         @Override
@@ -415,26 +428,37 @@ public final class ModSettingsScreen extends Screen {
                 ConfigManager.save();
                 return true;
             }
+
+            // Options (NEW)
+            if (!module.getSettings().isEmpty()) {
+                int optH = 16;
+                int optY = ry + h - optH - 8;
+                if (mx >= x + 8 && mx <= x + w - 8 && my >= optY && my <= optY + optH) {
+                    mc.setScreen(new SettingsDetailScreen(mc.currentScreen, module.getName(), module.getSettings()));
+                    return true;
+                }
+            }
             return false;
         }
     }
     
-    // ================== OPTIONS SCREEN ==================
+    // ================== SETTINGS DETAIL SCREEN ==================
     
-   private static final class WidgetOptionsScreen extends Screen {
+   private static final class SettingsDetailScreen extends Screen {
         private final Screen parent;
-        private final Widget widget;
+        private final String titleName;
+        private final List<Setting<?>> settings;
+        
         private int panelX, panelY, panelW, panelH;
         private String draggingKey = null;
-        
-        // Scroll
         private int scrollY = 0;
         private int contentHeight = 0;
 
-        protected WidgetOptionsScreen(Screen parent, Widget widget) {
+        protected SettingsDetailScreen(Screen parent, String titleName, List<Setting<?>> settings) {
             super(Text.literal("Options"));
             this.parent = parent;
-            this.widget = widget;
+            this.titleName = titleName;
+            this.settings = settings;
         }
 
         @Override
@@ -444,11 +468,10 @@ public final class ModSettingsScreen extends Screen {
             panelX = (this.width - panelW) / 2;
             panelY = (this.height - panelH) / 2;
             
-            // Calculate content height
             int h = 0;
-            for (Setting<?> s : widget.getSettings()) {
-                if (s instanceof BoolSetting) h += 24;
-                else if (s instanceof FloatSetting) h += 28; // 12 label + 16 slider
+            for (Setting<?> s : settings) {
+                if (s instanceof BoolSetting || s instanceof ModeSetting) h += 24;
+                else if (s instanceof FloatSetting) h += 28;
             }
             contentHeight = h;
         }
@@ -462,25 +485,20 @@ public final class ModSettingsScreen extends Screen {
         public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
             this.renderBackground(ctx, mouseX, mouseY, delta);
             
-            // Main Panel
             ctx.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xFF181818);
             drawSharpOutline(ctx, panelX, panelY, panelW, panelH, 0xFF2A2A2A);
             
-            // Header
             ctx.fill(panelX, panelY, panelX + panelW, panelY + 28, 0xFF202020);
-            ctx.drawTextWithShadow(textRenderer, widget.getName().toUpperCase() + " SETTINGS", panelX + 12, panelY + 10, 0xFFFFFFFF);
+            ctx.drawTextWithShadow(textRenderer, titleName.toUpperCase() + " SETTINGS", panelX + 12, panelY + 10, 0xFFFFFFFF);
 
-            // Close
             int closeX = panelX + panelW - 20;
             int closeY = panelY + 8;
             boolean hoverClose = mouseX >= closeX && mouseX <= closeX + 12 && mouseY >= closeY && mouseY <= closeY + 12;
             ctx.fill(closeX, closeY, closeX + 12, closeY + 12, hoverClose ? 0xFF991111 : 0xFF353535);
             ctx.drawCenteredTextWithShadow(textRenderer, "x", closeX + 6, closeY + 2, 0xFFFFFFFF);
 
-            // SCISSOR START
-            // Clip content to the area below header
             int contentY = panelY + 30;
-            int contentH = panelH - 35; // leave small bottom padding
+            int contentH = panelH - 35;
             
             ctx.enableScissor(panelX, contentY, panelX + panelW, contentY + contentH);
 
@@ -488,9 +506,8 @@ public final class ModSettingsScreen extends Screen {
             int x = panelX + 12;
             int w = panelW - 24;
 
-            for (Setting<?> s : widget.getSettings()) {
-                // Optimization: don't render if out of view
-                int itemH = (s instanceof BoolSetting) ? 24 : 28;
+            for (Setting<?> s : settings) {
+                int itemH = (s instanceof BoolSetting || s instanceof ModeSetting) ? 24 : 28;
                 if (y + itemH < contentY || y > contentY + contentH) {
                     y += itemH;
                     continue;
@@ -514,22 +531,30 @@ public final class ModSettingsScreen extends Screen {
                     ctx.drawTextWithShadow(textRenderer, val, x + w - textRenderer.getWidth(val), y, 0xFF999999);
                     
                     y += 12;
-                    // Slider BG
                     ctx.fill(x, y, x + w, y + 6, 0xFF2A2A2A);
                     
-                    // Slider Fill
                     float t = (fs.get() - fs.min()) / (fs.max() - fs.min());
                     int fw = (int) (w * t);
                     ctx.fill(x, y, x + fw, y + 6, 0xFF3B72FF);
                     
                     y += 16;
+                } else if (s instanceof ModeSetting ms) {
+                    ctx.drawTextWithShadow(textRenderer, ms.getDisplayName(), x, y + 4, 0xFFCCCCCC);
+                    
+                    String modeText = ms.get().toUpperCase();
+                    int mw = textRenderer.getWidth(modeText) + 12;
+                    int mx = x + w - mw;
+                    
+                    // Button BG
+                    ctx.fill(mx, y, mx + mw, y + 16, 0xFF2A2A2A);
+                    ctx.drawCenteredTextWithShadow(textRenderer, modeText, mx + mw / 2, y + 4, 0xFF3B72FF);
+                    
+                    y += 24;
                 }
             }
             
             ctx.disableScissor();
-            // SCISSOR END
-            
-            // Scrollbar (if needed)
+
             if (contentHeight > contentH) {
                 int barX = panelX + panelW - 6;
                 int barY = contentY;
@@ -550,7 +575,6 @@ public final class ModSettingsScreen extends Screen {
             int mx = (int) mouseX;
             int my = (int) mouseY;
 
-             // Close
             int closeX = panelX + panelW - 20;
             int closeY = panelY + 8;
             if (mx >= closeX && mx <= closeX + 12 && my >= closeY && my <= closeY + 12) {
@@ -558,14 +582,13 @@ public final class ModSettingsScreen extends Screen {
                 return true;
             }
             
-            // Check if click is within content area
             if (my < panelY + 30 || my > panelY + panelH - 5) return false;
 
             int y = (panelY + 40) - scrollY;
             int x = panelX + 12;
             int w = panelW - 24;
             
-            for (Setting<?> s : widget.getSettings()) {
+            for (Setting<?> s : settings) {
                 if (s instanceof BoolSetting bs) {
                      int sw = 30;
                     int sx = x + w - sw;
@@ -583,6 +606,20 @@ public final class ModSettingsScreen extends Screen {
                         return true;
                     }
                     y += 16;
+                } else if (s instanceof ModeSetting ms) {
+                    // Click on mode button
+                    // But actually, allow clicking anywhere on the right side or the whole row?
+                    // Let's make the button clickable
+                    String modeText = ms.get().toUpperCase();
+                    int mw = textRenderer.getWidth(modeText) + 12;
+                    int btnX = x + w - mw;
+                    
+                    if (mx >= btnX && mx <= btnX + mw && my >= y && my <= y + 16) {
+                        ms.cycle();
+                        ConfigManager.save();
+                        return true;
+                    }
+                    y += 24;
                 }
             }
             return super.mouseClicked(mouseX, mouseY, button);
@@ -597,7 +634,7 @@ public final class ModSettingsScreen extends Screen {
         @Override
         public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
             if (draggingKey != null) {
-                for (Setting<?> s : widget.getSettings()) {
+                for (Setting<?> s : settings) {
                     if (s instanceof FloatSetting fs && fs.getKey().equals(draggingKey)) {
                          updateSlider(fs, (int)mouseX, panelX + 12, panelW - 24);
                          return true;
@@ -611,7 +648,7 @@ public final class ModSettingsScreen extends Screen {
         public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
             int contentH = panelH - 35;
             if (contentHeight > contentH) {
-                int maxScroll = contentHeight - contentH + 20; // +20 padding
+                int maxScroll = contentHeight - contentH + 20;
                 scrollY = Math.max(0, Math.min(maxScroll, scrollY - (int)(verticalAmount * 20)));
                 return true;
             }

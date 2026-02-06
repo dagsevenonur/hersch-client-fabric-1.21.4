@@ -4,6 +4,9 @@ public abstract class Module {
     private final String name;
     private final ModuleCategory category;
     private boolean enabled;
+    
+    // Add settings list support
+    protected final java.util.List<com.herschclient.core.settings.Setting<?>> settings = new java.util.ArrayList<>();
 
     protected Module(String name, ModuleCategory category) {
         this.name = name;
@@ -28,4 +31,8 @@ public abstract class Module {
 
     protected void onEnable() {}
     protected void onDisable() {}
+    
+    public java.util.List<com.herschclient.core.settings.Setting<?>> getSettings() {
+        return java.util.Collections.unmodifiableList(settings);
+    }
 }

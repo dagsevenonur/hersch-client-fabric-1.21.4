@@ -23,6 +23,7 @@ public final class HerschClient implements ClientModInitializer {
 
     public static final AutoSprintModule AUTO_SPRINT = new AutoSprintModule();
     public static final com.herschclient.features.module.FullbrightModule FULLBRIGHT = new com.herschclient.features.module.FullbrightModule();
+    public static final com.herschclient.features.module.ZoomModule ZOOM = new com.herschclient.features.module.ZoomModule();
 
     @Override
     public void onInitializeClient() {
@@ -42,6 +43,7 @@ public final class HerschClient implements ClientModInitializer {
 
         MODULES.register(AUTO_SPRINT);
         MODULES.register(FULLBRIGHT);
+        MODULES.register(ZOOM);
 
 
         // 2) Config yükle (widgetlar register edildikten sonra!)
@@ -54,10 +56,9 @@ public final class HerschClient implements ClientModInitializer {
 
         // 2) Tick event
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            EVENT_BUS.postTick(client);
-
             AUTO_SPRINT.onTick(client);
             FULLBRIGHT.onTick(client);
+            ZOOM.onTick(client); // Zoom logic handles itself via keybinding check
         });
 
         // 3) Render2D event (HUD çizimi)
