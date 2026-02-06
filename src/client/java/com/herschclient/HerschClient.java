@@ -24,6 +24,7 @@ public final class HerschClient implements ClientModInitializer {
     public static final AutoSprintModule AUTO_SPRINT = new AutoSprintModule();
     public static final com.herschclient.features.module.FullbrightModule FULLBRIGHT = new com.herschclient.features.module.FullbrightModule();
     public static final com.herschclient.features.module.ZoomModule ZOOM = new com.herschclient.features.module.ZoomModule();
+    public static final com.herschclient.features.module.XrayModule XRAY = new com.herschclient.features.module.XrayModule();
 
     @Override
     public void onInitializeClient() {
@@ -44,6 +45,9 @@ public final class HerschClient implements ClientModInitializer {
         MODULES.register(AUTO_SPRINT);
         MODULES.register(FULLBRIGHT);
         MODULES.register(ZOOM);
+        MODULES.register(XRAY);
+
+        XRAY.init();
 
 
         // 2) Config yükle (widgetlar register edildikten sonra!)

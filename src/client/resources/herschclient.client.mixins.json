@@ -5,6 +5,8 @@
   "client": [
     "GameMenuScreenMixin",
     "LightmapTextureManagerMixin",
-    "GameRendererMixin"
+    "GameRendererMixin",
+    "AbstractBlockStateMixin",
+    "BlockShouldDrawSideMixin"
   ]
 }
